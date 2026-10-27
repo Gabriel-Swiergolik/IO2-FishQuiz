@@ -1,7 +1,14 @@
 package pl.pcz.io2.fishquizfrontend.model;
 
+import com.j256.ormlite.field.DatabaseField;
+import com.j256.ormlite.table.DatabaseTable;
+
+@DatabaseTable(tableName = "quizzes")
 public class Quiz {
+    @DatabaseField(generatedId = true)
     private int id;
+
+    @DatabaseField(canBeNull = false)
     private String title;
 
     public Quiz() {}
