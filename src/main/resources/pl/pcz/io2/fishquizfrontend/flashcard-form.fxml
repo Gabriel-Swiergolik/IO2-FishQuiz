@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Zakładka "Dodawanie fiszek": nowa fiszka albo edycja wybranej w "Przeglądanie" -->
+<VBox spacing="8" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="pl.pcz.io2.fishquizfrontend.controller.FlashcardController">
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label fx:id="titleLabel" styleClass="view-title"/>
+
+    <Label text="Awers"/>
+    <TextField fx:id="frontField" promptText="Awers (np. słówko)"/>
+
+    <Label text="Rewers"/>
+    <TextArea fx:id="backArea" promptText="Rewers (np. tłumaczenie i opis)" wrapText="true"
+              prefRowCount="5" VBox.vgrow="ALWAYS"/>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Button fx:id="chooseImageButton" text="Wybierz obrazek" onAction="#onChooseImage"/>
+        <Button fx:id="removeImageButton" text="Usuń obrazek" onAction="#onRemoveImage"/>
+        <ImageView fx:id="imagePreview" fitWidth="200" fitHeight="140" preserveRatio="true" smooth="true"/>
+        <Label fx:id="noImageLabel" text="Brak obrazka"/>
+    </HBox>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Button fx:id="saveButton" text="Zapisz w lokalnej bazie" defaultButton="true" onAction="#onSave"/>
+        <Button fx:id="cancelEditButton" text="Anuluj edycję" onAction="#onCancelEdit"/>
+        <Label fx:id="statusLabel" wrapText="true"/>
+    </HBox>
+</VBox>

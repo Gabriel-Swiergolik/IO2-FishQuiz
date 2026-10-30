@@ -14,6 +14,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <junit.version>5.12.1</junit.version>
+        <slf4j.version>2.0.12</slf4j.version>
     </properties>
 
     <dependencies>
@@ -64,10 +65,16 @@
             <version>6.1</version>
         </dependency>
 
+        <!-- sqlite-jdbc ciągnie slf4j-api 1.7; bez jawnej wersji 2.x slf4j-simple się nie podpina (NOP logger) -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>2.0.12</version>
+            <version>${slf4j.version}</version>
         </dependency>
     </dependencies>
 
@@ -78,9 +85,37 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <source>11</source>
-                    <target>11</target>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
                 </configuration>
+            </plugin>
+            <!-- Domyślny surefire z Mavena 3.8.5 (2.12.x) nie uruchamia testów JUnit 5 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+            </plugin>
+            <!-- Czytelny błąd zamiast "invalid target release: 21" przy starszym JDK -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>enforce-java</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[21,)</version>
+                                    <message>FishQuiz wymaga JDK 21 lub nowszego. Ustaw JAVA_HOME na katalog JDK 21.</message>
+                                </requireJavaVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.openjfx</groupId>
@@ -91,8 +126,7 @@
                         <!-- Default configuration for running with: mvn clean javafx:run -->
                         <id>default-cli</id>
                         <configuration>
-                            <mainClass>pl.pcz.io2.fishquizfrontend/pl.pcz.io2.fishquizfrontend.HelloApplication
-                            </mainClass>
+                            <mainClass>pl.pcz.io2.fishquizfrontend.AppLauncher</mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>
                             <jlinkImageName>app</jlinkImageName>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.TilePane?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Zakładka "Quiz": ekran startowy → awers → awers + rewers z oceną → podsumowanie.
+     Widoczny jest zawsze jeden z trzech paneli (przełącza QuizController). -->
+<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="pl.pcz.io2.fishquizfrontend.controller.QuizController">
+
+    <VBox fx:id="startPane" spacing="15" alignment="CENTER">
+        <Label text="Gotowy na powtórkę interwałową?" styleClass="view-title"/>
+        <!-- Pierwsza pozycja to wszystkie fiszki do powtórki, dalej zestawy (QuizController) -->
+        <HBox spacing="8" alignment="CENTER">
+            <Label text="Zestaw:"/>
+            <ComboBox fx:id="setCombo" prefWidth="260"/>
+            <Button fx:id="manageSetsButton" text="Zarządzaj zestawami…" onAction="#onManageSets"/>
+        </HBox>
+        <CheckBox fx:id="dueOnlyCheck" text="Tylko fiszki do powtórki" selected="true"/>
+        <Button fx:id="startButton" text="Rozpocznij test" defaultButton="true" onAction="#onStart"/>
+        <Label fx:id="startInfoLabel"/>
+    </VBox>
+
+    <ScrollPane fx:id="cardPane" fitToWidth="true" visible="false">
+        <VBox spacing="12" alignment="TOP_CENTER">
+            <padding>
+                <Insets top="20" right="20" bottom="20" left="20"/>
+            </padding>
+            <Label fx:id="progressLabel"/>
+            <Label fx:id="frontLabel" styleClass="quiz-front" wrapText="true"/>
+            <Button fx:id="showAnswerButton" text="Pokaż odpowiedź" onAction="#onShowAnswer"/>
+            <VBox fx:id="answerBox" spacing="12" alignment="TOP_CENTER">
+                <Separator/>
+                <Label fx:id="backLabel" styleClass="quiz-back" wrapText="true"/>
+                <ImageView fx:id="answerImage" fitWidth="360" fitHeight="220" preserveRatio="true" smooth="true"/>
+                <Label text="Oceń swoją odpowiedź:"/>
+                <!-- Przyciski ocen 0–5 tworzy kontroler na podstawie AnswerQuality -->
+                <TilePane fx:id="gradePane" prefColumns="3" hgap="8" vgap="8" alignment="CENTER"/>
+            </VBox>
+        </VBox>
+    </ScrollPane>
+
+    <VBox fx:id="summaryPane" spacing="15" alignment="CENTER" visible="false">
+        <Label text="Koniec powtórki" styleClass="view-title"/>
+        <Label fx:id="summaryLabel"/>
+        <Button text="Wróć" onAction="#onBackToStart"/>
+    </VBox>
+</StackPane>

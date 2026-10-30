@@ -1,0 +1,21 @@
+# Kompilacja i testy przy każdym pushu i PR do develop/main
+name: Build
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      # verify = kompilacja + testy (JUnit 5, bez wyświetlacza) + jar
+      - run: ./mvnw -B verify
