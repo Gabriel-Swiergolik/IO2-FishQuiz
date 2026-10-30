@@ -14,6 +14,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <junit.version>5.12.1</junit.version>
+        <slf4j.version>2.0.12</slf4j.version>
     </properties>
 
     <dependencies>
@@ -64,10 +65,16 @@
             <version>6.1</version>
         </dependency>
 
+        <!-- sqlite-jdbc ciągnie slf4j-api 1.7; bez jawnej wersji 2.x slf4j-simple się nie podpina (NOP logger) -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>2.0.12</version>
+            <version>${slf4j.version}</version>
         </dependency>
     </dependencies>
 
