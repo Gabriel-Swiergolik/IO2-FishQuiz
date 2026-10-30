@@ -2,15 +2,13 @@ package pl.pcz.io2.fishquizfrontend.dao.impl;
 
 import pl.pcz.io2.fishquizfrontend.dao.FlashcardDAO;
 import pl.pcz.io2.fishquizfrontend.model.Flashcard;
-import pl.pcz.io2.fishquizfrontend.util.DatabaseManager;
+import pl.pcz.io2.fishquizdb.DatabaseManager;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 public class FlashcardDAOImpl implements FlashcardDAO {
-    private final DatabaseManager dbManager = DatabaseManager.getInstance();
-
     @Override
     public void create(Flashcard entity) {}
 

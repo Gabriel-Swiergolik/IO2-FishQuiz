@@ -6,15 +6,20 @@ import com.j256.ormlite.support.ConnectionSource;
 import java.sql.SQLException;
 
 public class DatabaseManager {
-    private static final String DATABASE_URL = "jdbc:sqlite:database.db";
+    private static final String DEFAULT_DATABASE_URL = "jdbc:sqlite:database.db";
     private static ConnectionSource connectionSource;
 
     public static void init(){
+        init(DEFAULT_DATABASE_URL);
+    }
+
+    // Pozwala podać inny plik bazy (np. tymczasowy w testach)
+    public static void init(String databaseUrl){
         try{
             if (connectionSource == null){
-                connectionSource = new JdbcConnectionSource(DATABASE_URL);
+                connectionSource = new JdbcConnectionSource(databaseUrl);
                 System.out.println("Połączono z bazą danych");
-                System.out.println("Gdzie powstała baza: " + new java.io.File("database.db").getAbsolutePath());
+                System.out.println("Gdzie powstała baza: " + new java.io.File(databaseUrl.replace("jdbc:sqlite:", "")).getAbsolutePath());
                 // Place for future tables
             }
         }catch (SQLException e){
@@ -37,6 +42,9 @@ public class DatabaseManager {
                 System.out.println("Zamknięto połączenie z bazą danych");
             } catch (Exception e){
                 System.err.println("Błąd podczas zamykania połączenia: " + e.getMessage());
+            } finally {
+                // Reset, żeby można było ponownie wywołać init() (np. w kolejnym teście)
+                connectionSource = null;
             }
         }
     }
