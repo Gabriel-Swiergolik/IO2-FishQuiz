@@ -30,8 +30,7 @@ public class DatabaseManager {
         try{
             connectionSource = new JdbcConnectionSource(databaseUrl);
             createTables(connectionSource);
-            System.out.println("Połączono z bazą danych");
-            System.out.println("Gdzie powstała baza: " + new java.io.File(databaseUrl.replace("jdbc:sqlite:", "")).getAbsolutePath());
+            log.info("Połączono z bazą danych: {}", new java.io.File(databaseUrl.replace("jdbc:sqlite:", "")).getAbsolutePath());
         }catch (SQLException e){
             log.error("Błąd połączenia z bazą danych {}", databaseUrl, e);
             if (connectionSource != null){
@@ -60,9 +59,9 @@ public class DatabaseManager {
         if (connectionSource != null){
             try{
                 connectionSource.close();
-                System.out.println("Zamknięto połączenie z bazą danych");
+                log.info("Zamknięto połączenie z bazą danych");
             } catch (Exception e){
-                System.err.println("Błąd podczas zamykania połączenia: " + e.getMessage());
+                log.error("Błąd podczas zamykania połączenia z bazą danych", e);
             } finally {
                 // Reset, żeby można było ponownie wywołać init() (np. w kolejnym teście)
                 connectionSource = null;

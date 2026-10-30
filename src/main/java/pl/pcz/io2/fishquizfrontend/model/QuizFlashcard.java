@@ -8,8 +8,10 @@ import com.j256.ormlite.table.DatabaseTable;
 @DatabaseTable(tableName = "quiz_flashcards")
 public class QuizFlashcard {
     // Nazwy kolumn używane w zapytaniach DAO
+    public static final String ID_FIELD = "id";
     public static final String QUIZ_ID_FIELD = "quizId";
     public static final String FLASHCARD_ID_FIELD = "flashcardId";
+    public static final String ORDER_INDEX_FIELD = "orderIndex";
 
     @DatabaseField(generatedId = true)
     private int id;
