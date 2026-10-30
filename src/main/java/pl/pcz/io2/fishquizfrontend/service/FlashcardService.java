@@ -95,7 +95,13 @@ public class FlashcardService {
     // Import CSV: poprawne wiersze trafiają do bazy w jednej transakcji, pominięte są w wyniku
     public CsvImportExportService.ImportResult importCsv(File file) {
         CsvImportExportService.ImportResult result = csvService.importFromCsv(file);
-        flashcardDAO.createAll(result.flashcards());
+        try {
+            flashcardDAO.createAll(result.flashcards());
+        } catch (RuntimeException e) {
+            // Zapis się nie udał: nie zostawiamy osieroconych obrazów odtworzonych z pliku CSV
+            result.savedImages().forEach(this::deleteImageQuietly);
+            throw e;
+        }
         actionLogger.logAction("IMPORT", file.getName() + ": zaimportowano " + result.flashcards().size()
                 + ", pominięto " + result.skippedRows().size());
         return result;

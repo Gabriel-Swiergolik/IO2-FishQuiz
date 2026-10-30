@@ -76,6 +76,24 @@ class ImageManagerTest {
     }
 
     @Test
+    void saveBytesWritesUnderUniqueName() throws IOException {
+        String first = manager.saveImage(CONTENT, "stara-nazwa.PNG");
+        String second = manager.saveImage(CONTENT, "stara-nazwa.PNG");
+
+        assertNotEquals(first, second);
+        assertNotEquals("stara-nazwa.PNG", first);
+        assertTrue(first.endsWith(".png"));
+        assertArrayEquals(CONTENT, Files.readAllBytes(imagesDir.resolve(first)));
+    }
+
+    @Test
+    void saveBytesRejectsNonImageExtensions() {
+        assertThrows(IllegalArgumentException.class, () -> manager.saveImage(CONTENT, "notatki.txt"));
+        assertThrows(IllegalArgumentException.class, () -> manager.saveImage(CONTENT, "plik"));
+        assertFalse(Files.exists(imagesDir));
+    }
+
+    @Test
     void relativePathResolvesAgainstImagesDir() {
         assertEquals(imagesDir.resolve("abc.png"), manager.resolvePath("abc.png"));
     }

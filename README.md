@@ -56,21 +56,25 @@ Testy nie dotykają `database.db` ani `images/`.
 
 ## Format CSV
 - Kodowanie UTF-8; eksport dopisuje na początku BOM, import go pomija.
-- Pierwszy wiersz to nagłówek `front,back,imagePath`; wiersze kończą się CRLF.
+- Pierwszy wiersz to nagłówek `front,back,imagePath,imageData`; wiersze kończą się CRLF.
 - Cytowanie wg RFC 4180: pole z `,`, `"` lub nową linią jest w cudzysłowach, a `"` w środku jest podwojony.
-- `imagePath` to nazwa pliku w `images/` (same obrazki nie są eksportowane); puste pole = brak obrazka.
-  Postęp SM-2 i zestawy nie są eksportowane.
-- Import jest pobłażliwy: przyjmuje też końce linii LF, brak nagłówka i brak kolumny `imagePath`. Błędny wiersz
-  (zła liczba pól, pusty awers lub rewers, źle postawiony cudzysłów) jest pomijany, a reszta pliku się importuje.
+- `imagePath` to nazwa pliku w `images/`; puste pole = brak obrazka.
+- `imageData` to zawartość obrazka w Base64, więc sam plik CSV wystarcza, żeby odtworzyć obrazki
+  (np. na innym komputerze albo po usunięciu fiszek). Format obrazka wynika z rozszerzenia w `imagePath`.
+  Przy imporcie obrazek jest zapisywany w `images/` pod nową nazwą. Postęp SM-2 i zestawy nie są eksportowane.
+- Import jest pobłażliwy: przyjmuje też końce linii LF, brak nagłówka i stare pliki bez kolumn `imageData`
+  i `imagePath`. Błędny wiersz (zła liczba pól, pusty awers lub rewers, źle postawiony cudzysłów, niepoprawne
+  dane obrazka) jest pomijany, a reszta pliku się importuje.
 
 ```csv
-front,back,imagePath
-kot,cat,
-"Stolica Polski, miasto",Warszawa,
+front,back,imagePath,imageData
+kot,cat,,
+"Stolica Polski, miasto",Warszawa,,
 ```
 
 Excel z polskimi ustawieniami oczekuje separatora `;`, więc plik najlepiej otworzyć przez
-Dane → Z tekstu/CSV (LibreOffice sam pyta o separator).
+Dane → Z tekstu/CSV (LibreOffice sam pyta o separator). Excel obcina komórki dłuższe niż 32 767 znaków,
+więc pliku z dużymi obrazkami nie należy w nim zapisywać.
 
 ## CI
 GitHub Actions (`.github/workflows/build.yml`) uruchamia `./mvnw -B verify` (JDK 21, Temurin) przy każdym pushu

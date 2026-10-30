@@ -1,5 +1,6 @@
 package pl.pcz.io2.fishquizfrontend.service;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import pl.pcz.io2.fishquizfrontend.model.Flashcard;
@@ -9,17 +10,37 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.List;
+import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CsvImportExportServiceTest {
+    private static final byte[] IMAGE = {(byte) 0x89, 'P', 'N', 'G', 0, 1, 2, (byte) 0xFF};
+
     @TempDir
     Path tempDir;
 
-    private final CsvImportExportService service = new CsvImportExportService();
+    private Path imagesDir;
+    private CsvImportExportService service;
+
+    @BeforeEach
+    void setUp() {
+        imagesDir = tempDir.resolve("images");
+        service = new CsvImportExportService(new ImageManager(imagesDir));
+    }
+
+    private long imageFileCount() throws IOException {
+        if (!Files.isDirectory(imagesDir)) return 0;
+        try (Stream<Path> files = Files.list(imagesDir)) {
+            return files.count();
+        }
+    }
 
     private File file(String content) throws IOException {
         Path file = tempDir.resolve("import.csv");
@@ -65,9 +86,76 @@ class CsvImportExportServiceTest {
                 new Flashcard(2, "a,b", "powiedział \"tak\"", "x.png")), file);
 
         String content = Files.readString(file.toPath(), StandardCharsets.UTF_8);
-        assertEquals("﻿front,back,imagePath\r\n"
-                + "kot,cat,\r\n"
-                + "\"a,b\",\"powiedział \"\"tak\"\"\",x.png\r\n", content);
+        // x.png nie istnieje, więc pole imageData jest puste
+        assertEquals("﻿front,back,imagePath,imageData\r\n"
+                + "kot,cat,,\r\n"
+                + "\"a,b\",\"powiedział \"\"tak\"\"\",x.png,\r\n", content);
+    }
+
+    @Test
+    void exportEmbedsImageAsBase64() throws IOException {
+        Files.createDirectories(imagesDir);
+        Files.write(imagesDir.resolve("abc.png"), IMAGE);
+        File file = tempDir.resolve("fiszki.csv").toFile();
+
+        service.exportToCsv(List.of(
+                new Flashcard(1, "kot", "cat", "abc.png"),
+                new Flashcard(2, "pies", "dog", "brak-pliku.png")), file);
+
+        List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+        assertEquals("kot,cat,abc.png," + Base64.getEncoder().encodeToString(IMAGE), lines.get(1));
+        assertEquals("pies,dog,brak-pliku.png,", lines.get(2));
+    }
+
+    @Test
+    void importRestoresEmbeddedImageIntoEmptyImagesDir() throws IOException {
+        String data = Base64.getEncoder().encodeToString(IMAGE);
+
+        CsvImportExportService.ImportResult result = service.importFromCsv(
+                file("front,back,imagePath,imageData\r\nkot,cat,stary.png," + data + "\r\n"));
+
+        assertTrue(result.skippedRows().isEmpty(), result.skippedRows().toString());
+        String path = result.flashcards().get(0).getImagePath();
+        assertNotEquals("stary.png", path);
+        assertTrue(path.endsWith(".png"));
+        assertArrayEquals(IMAGE, Files.readAllBytes(imagesDir.resolve(path)));
+        assertEquals(List.of(path), result.savedImages());
+    }
+
+    @Test
+    void legacyThreeAndTwoColumnFilesImportAsBefore() throws IOException {
+        CsvImportExportService.ImportResult result = service.importFromCsv(
+                file("front,back,imagePath\r\nkot,cat,abc.png\r\npies,dog,\r\nmysz,mouse\r\n"));
+
+        assertTrue(result.skippedRows().isEmpty(), result.skippedRows().toString());
+        assertEquals(List.of("kot", "pies", "mysz"), fronts(result));
+        assertEquals("abc.png", result.flashcards().get(0).getImagePath());
+        assertNull(result.flashcards().get(1).getImagePath());
+        assertNull(result.flashcards().get(2).getImagePath());
+        assertTrue(result.savedImages().isEmpty());
+        assertEquals(0, imageFileCount());
+    }
+
+    @Test
+    void invalidEmbeddedImageRowsAreSkipped() throws IOException {
+        String data = Base64.getEncoder().encodeToString(IMAGE);
+        String csv = "front,back,imagePath,imageData\n"
+                + "kot,cat,a.png,to-nie-jest-base64!\n"   // linia 2: złe Base64
+                + "pies,dog,notatki.txt," + data + "\n"    // linia 3: nieobsługiwany format
+                + "mysz,mouse,," + data + "\n"             // linia 4: brak nazwy pliku
+                + "ryba,fish,b.png," + data + "\n";        // linia 5: OK
+
+        CsvImportExportService.ImportResult result = service.importFromCsv(file(csv));
+
+        assertEquals(List.of("ryba"), fronts(result));
+        assertEquals(3, result.skippedRows().size());
+        assertEquals("Wiersz 2: niepoprawne dane obrazu (Base64)", result.skippedRows().get(0));
+        assertTrue(result.skippedRows().get(1).startsWith("Wiersz 3: Nieobsługiwany format obrazu"),
+                result.skippedRows().get(1));
+        assertTrue(result.skippedRows().get(2).startsWith("Wiersz 4: dane obrazu bez nazwy pliku"),
+                result.skippedRows().get(2));
+        // Plik powstał tylko dla poprawnego wiersza
+        assertEquals(1, imageFileCount());
     }
 
     @Test
@@ -86,7 +174,7 @@ class CsvImportExportServiceTest {
         String csv = "front,back,imagePath\n"
                 + "kot,cat,\n"               // linia 2: OK
                 + "tylko-jedno-pole\n"       // linia 3: za mało pól
-                + "a,b,c,d\n"                // linia 4: za dużo pól
+                + "a,b,c,d,e\n"              // linia 4: za dużo pól
                 + ",pusty awers,\n"          // linia 5: pusty awers
                 + "\"zły\"x,cudzysłów,\n"    // linia 6: znak po cudzysłowie
                 + "\"wiele\nlinii\",ok,\n"   // linie 7-8: OK

@@ -30,7 +30,7 @@ public class AppContext {
     private final QuizDAO quizDAO = new QuizDAOImpl();
     private final SpacedRepetitionService spacedRepetitionService = new SpacedRepetitionService();
     private final ImageManager imageManager = new ImageManager();
-    private final CsvImportExportService csvService = new CsvImportExportService();
+    private final CsvImportExportService csvService = new CsvImportExportService(imageManager);
     private final ActionLogger actionLogger = new ActionLogger();
     private final FlashcardService flashcardService = new FlashcardService(flashcardDAO, imageManager, csvService, actionLogger);
     private final QuizSetService quizSetService = new QuizSetService(quizDAO, actionLogger);

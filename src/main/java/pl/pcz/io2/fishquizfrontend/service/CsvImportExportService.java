@@ -10,7 +10,9 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -19,31 +21,48 @@ import java.util.List;
  * <p>Format pliku:
  * <ul>
  *   <li>kodowanie UTF-8; eksport dopisuje na początku BOM (żeby Excel rozpoznał UTF-8), import go pomija;</li>
- *   <li>pierwszy wiersz to nagłówek {@code front,back,imagePath};</li>
+ *   <li>pierwszy wiersz to nagłówek {@code front,back,imagePath,imageData};</li>
  *   <li>cytowanie wg RFC 4180: pole zawierające {@code ,}, {@code "} lub znak nowej linii jest ujęte
  *       w cudzysłowy, a {@code "} wewnątrz jest podwojony; wiersze kończą się CRLF;</li>
- *   <li>{@code imagePath} to ścieżka z {@link ImageManager} (same pliki obrazów nie są eksportowane);
- *       pusta wartość oznacza brak obrazu. Postęp SM-2 nie jest eksportowany.</li>
+ *   <li>{@code imagePath} to ścieżka z {@link ImageManager}; pusta wartość oznacza brak obrazu;</li>
+ *   <li>{@code imageData} to zawartość pliku obrazu w Base64 (jedna linia, bez cudzysłowów), więc plik CSV
+ *       wystarcza do odtworzenia obrazów. Format obrazu wynika z rozszerzenia w {@code imagePath}.
+ *       Gdy pliku obrazu nie da się odczytać przy eksporcie, pole jest puste (WARN w logu).
+ *       Base64 zajmuje ok. 4/3 rozmiaru obrazu, a Excel obcina komórki dłuższe niż 32 767 znaków,
+ *       więc pliku z dużymi obrazami nie należy zapisywać w Excelu.</li>
  * </ul>
+ * Postęp SM-2 i zestawy nie są eksportowane.
  *
- * <p>Import jest pobłażliwy: akceptuje też końce linii LF, brak nagłówka i brak kolumny {@code imagePath}.
- * Puste linie są pomijane bez komunikatu. Błędny wiersz (zła liczba pól, pusty awers lub rewers,
- * niezamknięty lub źle postawiony cudzysłów) jest pomijany, a import trwa dalej. Opis każdego pominiętego
- * wiersza (z numerem linii w pliku) trafia do {@link ImportResult#skippedRows()} i do logu (WARN).
+ * <p>Import jest pobłażliwy: akceptuje też końce linii LF, brak nagłówka i stary format bez kolumn
+ * {@code imageData} i {@code imagePath}. Gdy {@code imageData} jest puste, {@code imagePath} trafia do fiszki
+ * bez zmian (jak w starym formacie). Gdy nie jest puste, obraz jest zapisywany przez {@link ImageManager}
+ * pod nową nazwą (UUID), także przy pustym katalogu obrazów. Puste linie są pomijane bez komunikatu.
+ * Błędny wiersz (zła liczba pól, pusty awers lub rewers, niezamknięty lub źle postawiony cudzysłów,
+ * niepoprawne Base64, nieobsługiwany format obrazu) jest pomijany, a import trwa dalej. Opis każdego
+ * pominiętego wiersza (z numerem linii w pliku) trafia do {@link ImportResult#skippedRows()} i do logu (WARN).
  *
- * <p>Serwis nie zapisuje niczego w bazie; zaimportowane fiszki zapisuje kontroler przez DAO.
+ * <p>Serwis nie zapisuje niczego w bazie; zaimportowane fiszki zapisuje {@link FlashcardService} przez DAO.
+ * Pliki obrazów zapisane przy imporcie są w {@link ImportResult#savedImages()}, żeby dało się je usunąć,
+ * jeśli zapis w bazie się nie uda.
  */
 public class CsvImportExportService {
     private static final Logger log = LoggerFactory.getLogger(CsvImportExportService.class);
-    private static final String HEADER = "front,back,imagePath";
+    private static final String HEADER = "front,back,imagePath,imageData";
     private static final String EOL = "\r\n";
     private static final char BOM = '﻿';
 
-    // Wynik importu: nowe fiszki (id 0, domyślny stan SM-2) i opisy pominiętych wierszy
-    public record ImportResult(List<Flashcard> flashcards, List<String> skippedRows) {}
+    // Wynik importu: nowe fiszki (id 0, domyślny stan SM-2), opisy pominiętych wierszy
+    // i nazwy plików obrazów zapisanych z kolumny imageData
+    public record ImportResult(List<Flashcard> flashcards, List<String> skippedRows, List<String> savedImages) {}
 
     // Jeden rekord CSV; error != null oznacza wiersz, którego nie dało się poprawnie odczytać
     private record CsvRecord(int line, List<String> fields, String error) {}
+
+    private final ImageManager imageManager;
+
+    public CsvImportExportService(ImageManager imageManager) {
+        this.imageManager = imageManager;
+    }
 
     public ImportResult importFromCsv(File file) {
         String content;
@@ -58,33 +77,62 @@ public class CsvImportExportService {
 
         List<Flashcard> flashcards = new ArrayList<>();
         List<String> skippedRows = new ArrayList<>();
+        List<String> savedImages = new ArrayList<>();
         boolean firstRecord = true;
-        for (CsvRecord record : parse(content)) {
-            String error = record.error();
-            if (error == null && firstRecord && isHeader(record.fields())) {
+        try {
+            for (CsvRecord record : parse(content)) {
+                String error = record.error();
+                if (error == null && firstRecord && isHeader(record.fields())) {
+                    firstRecord = false;
+                    continue;
+                }
                 firstRecord = false;
-                continue;
-            }
-            firstRecord = false;
 
-            List<String> fields = record.fields();
-            if (error == null && (fields.size() < 2 || fields.size() > 3)) {
-                error = "oczekiwano 2 lub 3 pól, jest " + fields.size();
-            }
-            if (error == null && (fields.get(0).isBlank() || fields.get(1).isBlank())) {
-                error = "pusty awers lub rewers";
-            }
-            if (error != null) {
-                String message = "Wiersz " + record.line() + ": " + error;
-                log.warn("Import CSV {}: pominięto. {}", file, message);
-                skippedRows.add(message);
-                continue;
-            }
+                List<String> fields = record.fields();
+                if (error == null && (fields.size() < 2 || fields.size() > 4)) {
+                    error = "oczekiwano od 2 do 4 pól, jest " + fields.size();
+                }
+                if (error == null && (fields.get(0).isBlank() || fields.get(1).isBlank())) {
+                    error = "pusty awers lub rewers";
+                }
+                String imagePath = error == null && fields.size() >= 3 && !fields.get(2).isBlank() ? fields.get(2) : null;
+                String imageData = error == null && fields.size() == 4 ? fields.get(3).strip() : "";
+                byte[] imageBytes = null;
+                if (error == null && !imageData.isEmpty()) {
+                    if (imagePath == null) {
+                        error = "dane obrazu bez nazwy pliku (nie wiadomo, jaki to format)";
+                    } else {
+                        try {
+                            imageBytes = Base64.getDecoder().decode(imageData);
+                        } catch (IllegalArgumentException e) {
+                            error = "niepoprawne dane obrazu (Base64)";
+                        }
+                    }
+                }
+                if (imageBytes != null) {
+                    // Zapis na końcu, więc pominięty wiersz nie zostawia pliku
+                    try {
+                        imagePath = imageManager.saveImage(imageBytes, imagePath);
+                        savedImages.add(imagePath);
+                    } catch (IllegalArgumentException e) {
+                        error = e.getMessage();
+                    }
+                }
+                if (error != null) {
+                    String message = "Wiersz " + record.line() + ": " + error;
+                    log.warn("Import CSV {}: pominięto. {}", file, message);
+                    skippedRows.add(message);
+                    continue;
+                }
 
-            String imagePath = fields.size() == 3 && !fields.get(2).isBlank() ? fields.get(2) : null;
-            flashcards.add(new Flashcard(0, fields.get(0), fields.get(1), imagePath));
+                flashcards.add(new Flashcard(0, fields.get(0), fields.get(1), imagePath));
+            }
+        } catch (RuntimeException e) {
+            // Import przerwany (np. brak miejsca na dysku): usuwamy obrazy zapisane do tej pory
+            savedImages.forEach(this::deleteImageQuietly);
+            throw e;
         }
-        return new ImportResult(flashcards, skippedRows);
+        return new ImportResult(flashcards, skippedRows, savedImages);
     }
 
     public void exportToCsv(List<Flashcard> flashcards, File file) {
@@ -98,10 +146,35 @@ public class CsvImportExportService {
                 writer.write(quote(flashcard.getBackText()));
                 writer.write(',');
                 writer.write(quote(flashcard.getImagePath()));
+                writer.write(',');
+                writer.write(encodeImage(flashcard.getImagePath(), file));
                 writer.write(EOL);
             }
         } catch (IOException e) {
             throw new UncheckedIOException("Nie udało się zapisać pliku CSV " + file, e);
+        }
+    }
+
+    // Base64 nie zawiera przecinków, cudzysłowów ani nowych linii, więc nie wymaga cytowania.
+    // Brak pliku obrazu nie przerywa eksportu: fiszka trafia do pliku bez obrazu.
+    private String encodeImage(String imagePath, File file) {
+        if (imagePath == null || imagePath.isBlank()) {
+            return "";
+        }
+        Path image = imageManager.resolvePath(imagePath);
+        try {
+            return Base64.getEncoder().encodeToString(Files.readAllBytes(image));
+        } catch (IOException e) {
+            log.warn("Eksport CSV {}: nie udało się odczytać obrazu {}, fiszka bez danych obrazu ({})", file, image, e.toString());
+            return "";
+        }
+    }
+
+    private void deleteImageQuietly(String path) {
+        try {
+            imageManager.deleteImage(path);
+        } catch (UncheckedIOException e) {
+            log.warn("Nie udało się usunąć pliku obrazu {}", path, e);
         }
     }
 

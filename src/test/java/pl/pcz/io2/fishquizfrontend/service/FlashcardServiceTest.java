@@ -15,9 +15,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -39,7 +41,7 @@ class FlashcardServiceTest extends DbTestSupport {
         imagesDir = tempDir.resolve("images");
         imageManager = new ImageManager(imagesDir);
         dao = new FlashcardDAOImpl();
-        service = new FlashcardService(dao, imageManager, new CsvImportExportService(), new ActionLogger());
+        service = new FlashcardService(dao, imageManager, new CsvImportExportService(imageManager), new ActionLogger());
     }
 
     private File sourceImage(String name) throws IOException {
@@ -172,7 +174,7 @@ class FlashcardServiceTest extends DbTestSupport {
     void newImageIsRemovedWhenDatabaseWriteFails() throws IOException {
         InMemoryFlashcardDAO failing = new InMemoryFlashcardDAO();
         failing.failWrites = true;
-        FlashcardService failingService = new FlashcardService(failing, imageManager, new CsvImportExportService(), new ActionLogger());
+        FlashcardService failingService = new FlashcardService(failing, imageManager, new CsvImportExportService(imageManager), new ActionLogger());
         File image = sourceImage("kot.png");
 
         assertThrows(DataAccessException.class, () -> failingService.save(form(0, "kot", "cat"), image, false));
@@ -248,5 +250,43 @@ class FlashcardServiceTest extends DbTestSupport {
 
         List<String> backs = dao.findAll().stream().map(Flashcard::getBackText).sorted().toList();
         assertEquals(List.of("cat", "turtle, \"slow\"\nanimal"), backs);
+    }
+
+    @Test
+    void exportDeleteImportRestoresImagesWithSameBytes() throws IOException {
+        Path catImage = tempDir.resolve("kot.png");
+        Path dogImage = tempDir.resolve("pies.jpg");
+        Files.write(catImage, new byte[]{1, 2, 3});
+        Files.write(dogImage, new byte[]{(byte) 0xFF, (byte) 0xD8, 0, 42});
+        service.save(form(0, "kot", "cat"), catImage.toFile(), false);
+        service.save(form(0, "pies", "dog"), dogImage.toFile(), false);
+        File csv = tempDir.resolve("eksport.csv").toFile();
+
+        service.exportCsv(csv);
+        for (FlashcardDTO dto : service.findAll()) {
+            service.delete(dto.getId());
+        }
+        assertEquals(0, imageFileCount());
+        CsvImportExportService.ImportResult result = service.importCsv(csv);
+
+        assertTrue(result.skippedRows().isEmpty(), result.skippedRows().toString());
+        List<Flashcard> cards = dao.findAll().stream()
+                .sorted(Comparator.comparing(Flashcard::getFrontText)).toList();
+        assertEquals(List.of("kot", "pies"), cards.stream().map(Flashcard::getFrontText).toList());
+        assertEquals(List.of("cat", "dog"), cards.stream().map(Flashcard::getBackText).toList());
+        assertArrayEquals(Files.readAllBytes(catImage), Files.readAllBytes(imagesDir.resolve(cards.get(0).getImagePath())));
+        assertArrayEquals(Files.readAllBytes(dogImage), Files.readAllBytes(imagesDir.resolve(cards.get(1).getImagePath())));
+    }
+
+    @Test
+    void importRemovesRestoredImagesWhenDatabaseWriteFails() throws IOException {
+        InMemoryFlashcardDAO failing = new InMemoryFlashcardDAO();
+        failing.failWrites = true;
+        FlashcardService failingService = new FlashcardService(failing, imageManager, new CsvImportExportService(imageManager), new ActionLogger());
+        Path csv = tempDir.resolve("fiszki.csv");
+        Files.writeString(csv, "front,back,imagePath,imageData\nkot,cat,kot.png,AQID\n", UTF_8);
+
+        assertThrows(DataAccessException.class, () -> failingService.importCsv(csv.toFile()));
+        assertEquals(0, imageFileCount());
     }
 }

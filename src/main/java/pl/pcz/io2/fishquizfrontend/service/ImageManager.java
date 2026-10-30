@@ -30,17 +30,24 @@ public class ImageManager {
 
     // Kopiuje plik pod unikalną nazwą (UUID + rozszerzenie) i zwraca ścieżkę względną
     public String saveImage(File sourceFile) {
-        String extension = extensionOf(sourceFile.getName());
-        if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("Nieobsługiwany format obrazu: " + sourceFile.getName()
-                    + " (dozwolone: png, jpg, jpeg, gif, bmp)");
-        }
-        String fileName = UUID.randomUUID() + "." + extension;
+        String fileName = UUID.randomUUID() + "." + checkedExtension(sourceFile.getName());
         try {
             Files.createDirectories(imagesDir);
             Files.copy(sourceFile.toPath(), imagesDir.resolve(fileName));
         } catch (IOException e) {
             throw new UncheckedIOException("Nie udało się skopiować obrazu " + sourceFile, e);
+        }
+        return fileName;
+    }
+
+    // Zapisuje bajty obrazu (np. z importu CSV) pod unikalną nazwą; rozszerzenie bierzemy z originalName
+    public String saveImage(byte[] data, String originalName) {
+        String fileName = UUID.randomUUID() + "." + checkedExtension(originalName);
+        try {
+            Files.createDirectories(imagesDir);
+            Files.write(imagesDir.resolve(fileName), data);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Nie udało się zapisać obrazu " + fileName, e);
         }
         return fileName;
     }
@@ -69,6 +76,15 @@ public class ImageManager {
         } catch (IOException e) {
             throw new UncheckedIOException("Nie udało się usunąć obrazu " + path, e);
         }
+    }
+
+    private static String checkedExtension(String fileName) {
+        String extension = extensionOf(fileName);
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new IllegalArgumentException("Nieobsługiwany format obrazu: " + fileName
+                    + " (dozwolone: png, jpg, jpeg, gif, bmp)");
+        }
+        return extension;
     }
 
     private static String extensionOf(String fileName) {
