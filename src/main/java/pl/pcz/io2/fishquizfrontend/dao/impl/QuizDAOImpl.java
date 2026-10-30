@@ -20,12 +20,19 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * {@link QuizDAO} na ORMLite. Skład zestawu jest w tabeli {@link QuizFlashcard}.
+ */
 public class QuizDAOImpl implements QuizDAO {
     private final ConnectionSource connectionSource;
     private final Dao<Quiz, Integer> quizDao;
     private final Dao<QuizFlashcard, Integer> quizFlashcardDao;
     private final Dao<Flashcard, Integer> flashcardDao;
 
+    /**
+     * Tworzy DAO ORMLite na połączeniu z {@link DatabaseManager#getConnectionSource()}.
+     * @throws DataAccessException gdy nie udało się przygotować DAO
+     */
     public QuizDAOImpl() {
         connectionSource = DatabaseManager.getConnectionSource();
         try {
@@ -37,6 +44,11 @@ public class QuizDAOImpl implements QuizDAO {
         }
     }
 
+    /**
+     * Zapisuje nowy zestaw; ORMLite ustawia wygenerowane id w obiekcie.
+     * @param entity zestaw do zapisania
+     * @throws DataAccessException gdy zapis się nie uda
+     */
     @Override
     public void create(Quiz entity) {
         try {
@@ -46,6 +58,12 @@ public class QuizDAOImpl implements QuizDAO {
         }
     }
 
+    /**
+     * Odczytuje zestaw o podanym id.
+     * @param id identyfikator
+     * @return zestaw albo pusty {@code Optional}, gdy nie istnieje
+     * @throws DataAccessException gdy odczyt się nie uda
+     */
     @Override
     public Optional<Quiz> read(Integer id) {
         try {
@@ -55,6 +73,11 @@ public class QuizDAOImpl implements QuizDAO {
         }
     }
 
+    /**
+     * Zapisuje zmiany zestawu (wg id).
+     * @param entity zestaw ze zmianami
+     * @throws DataAccessException gdy zapis się nie uda
+     */
     @Override
     public void update(Quiz entity) {
         try {
@@ -64,6 +87,11 @@ public class QuizDAOImpl implements QuizDAO {
         }
     }
 
+    /**
+     * Usuwa zestaw i jego przypisania w jednej transakcji; same fiszki zostają.
+     * @param id identyfikator zestawu
+     * @throws DataAccessException gdy usunięcie się nie uda (nic nie zostaje usunięte)
+     */
     @Override
     public void delete(Integer id) {
         try {
@@ -80,6 +108,10 @@ public class QuizDAOImpl implements QuizDAO {
         }
     }
 
+    /**
+     * @return wszystkie zestawy
+     * @throws DataAccessException gdy odczyt się nie uda
+     */
     @Override
     public List<Quiz> findAll() {
         try {

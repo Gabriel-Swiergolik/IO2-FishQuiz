@@ -16,11 +16,18 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * {@link FlashcardDAO} na ORMLite. Usuwanie fiszki i zapis wielu fiszek odbywają się w transakcji.
+ */
 public class FlashcardDAOImpl implements FlashcardDAO {
     private final ConnectionSource connectionSource;
     private final Dao<Flashcard, Integer> flashcardDao;
     private final Dao<QuizFlashcard, Integer> quizFlashcardDao;
 
+    /**
+     * Tworzy DAO ORMLite na połączeniu z {@link DatabaseManager#getConnectionSource()}.
+     * @throws DataAccessException gdy nie udało się przygotować DAO
+     */
     public FlashcardDAOImpl() {
         connectionSource = DatabaseManager.getConnectionSource();
         try {
@@ -31,6 +38,11 @@ public class FlashcardDAOImpl implements FlashcardDAO {
         }
     }
 
+    /**
+     * Zapisuje nową fiszkę; ORMLite ustawia wygenerowane id w obiekcie.
+     * @param entity fiszkę do zapisania
+     * @throws DataAccessException gdy zapis się nie uda
+     */
     @Override
     public void create(Flashcard entity) {
         try {
@@ -56,6 +68,12 @@ public class FlashcardDAOImpl implements FlashcardDAO {
         }
     }
 
+    /**
+     * Odczytuje fiszkę o podanym id.
+     * @param id identyfikator
+     * @return fiszkę albo pusty {@code Optional}, gdy nie istnieje
+     * @throws DataAccessException gdy odczyt się nie uda
+     */
     @Override
     public Optional<Flashcard> read(Integer id) {
         try {
@@ -65,6 +83,11 @@ public class FlashcardDAOImpl implements FlashcardDAO {
         }
     }
 
+    /**
+     * Zapisuje zmiany fiszki (wg id).
+     * @param entity fiszkę ze zmianami
+     * @throws DataAccessException gdy zapis się nie uda
+     */
     @Override
     public void update(Flashcard entity) {
         try {
@@ -74,6 +97,11 @@ public class FlashcardDAOImpl implements FlashcardDAO {
         }
     }
 
+    /**
+     * Usuwa fiszkę i jej przypisania do zestawów w jednej transakcji.
+     * @param id identyfikator fiszki
+     * @throws DataAccessException gdy usunięcie się nie uda (nic nie zostaje usunięte)
+     */
     @Override
     public void delete(Integer id) {
         try {
@@ -90,6 +118,10 @@ public class FlashcardDAOImpl implements FlashcardDAO {
         }
     }
 
+    /**
+     * @return wszystkie fiszki
+     * @throws DataAccessException gdy odczyt się nie uda
+     */
     @Override
     public List<Flashcard> findAll() {
         try {

@@ -16,3 +16,6 @@ database.db
 
 #Obrazy fiszek (ImageManager)
 images/
+
+#Dokumentacja generowana przez Doxygen
+docs/doxygen/

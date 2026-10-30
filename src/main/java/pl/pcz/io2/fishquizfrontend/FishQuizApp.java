@@ -13,9 +13,15 @@ import pl.pcz.io2.fishquizfrontend.util.ErrorDialogs;
 
 import java.io.IOException;
 
+/** Aplikacja JavaFX: otwiera bazę, tworzy {@link AppContext} i pokazuje główne okno (main-view.fxml). */
 public class FishQuizApp extends Application {
     private AppContext context;
 
+    /**
+     * Otwiera bazę i pokazuje główne okno. Gdy bazy nie da się otworzyć, pokazuje błąd i zamyka aplikację.
+     * @param primaryStage główne okno
+     * @throws IOException gdy nie udało się wczytać main-view.fxml
+     */
     @Override
     public void start(Stage primaryStage) throws IOException {
         ErrorDialogs.installUncaughtExceptionHandler();
@@ -45,6 +51,7 @@ public class FishQuizApp extends Application {
         primaryStage.show();
     }
 
+    /** Kończy zadania w tle, a potem zamyka bazę. */
     @Override
     public void stop() {
         // Najpierw dokończ zapisy w tle, potem zamknij bazę
@@ -54,6 +61,10 @@ public class FishQuizApp extends Application {
         DatabaseManager.close();
     }
 
+    /**
+     * Uruchamia aplikację JavaFX ({@code Application.launch}).
+     * @param args argumenty wiersza poleceń
+     */
     public static void main(String[] args) {
         launch(args);
     }

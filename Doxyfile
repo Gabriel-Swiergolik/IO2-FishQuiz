@@ -1,0 +1,31 @@
+# Konfiguracja Doxygen dla dokumentacji technicznej FishQuiz.
+# Uruchomienie z katalogu głównego repozytorium: doxygen Doxyfile
+# Wynik (HTML): docs/doxygen/index.html. Pozostałe opcje mają wartości domyślne.
+
+PROJECT_NAME           = FishQuiz
+PROJECT_BRIEF          = "System Fiszek: nauka z powtórkami interwałowymi (SM-2)"
+OUTPUT_DIRECTORY       = docs
+HTML_OUTPUT            = doxygen
+OUTPUT_LANGUAGE        = Polish
+
+INPUT                  = README.md src/main/java
+INPUT_ENCODING         = UTF-8
+FILE_PATTERNS          = *.java
+RECURSIVE              = YES
+USE_MDFILE_AS_MAINPAGE = README.md
+
+OPTIMIZE_OUTPUT_JAVA   = YES
+JAVADOC_AUTOBRIEF      = YES
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_PACKAGE        = NO
+EXTRACT_STATIC         = YES
+SOURCE_BROWSER         = YES
+
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+HAVE_DOT               = NO

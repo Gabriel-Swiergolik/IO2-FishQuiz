@@ -39,10 +39,10 @@ import java.util.List;
  * pod nową nazwą (UUID), także przy pustym katalogu obrazów. Puste linie są pomijane bez komunikatu.
  * Błędny wiersz (zła liczba pól, pusty awers lub rewers, niezamknięty lub źle postawiony cudzysłów,
  * niepoprawne Base64, nieobsługiwany format obrazu) jest pomijany, a import trwa dalej. Opis każdego
- * pominiętego wiersza (z numerem linii w pliku) trafia do {@link ImportResult#skippedRows()} i do logu (WARN).
+ * pominiętego wiersza (z numerem linii w pliku) trafia do {@code ImportResult.skippedRows()} i do logu (WARN).
  *
  * <p>Serwis nie zapisuje niczego w bazie; zaimportowane fiszki zapisuje {@link FlashcardService} przez DAO.
- * Pliki obrazów zapisane przy imporcie są w {@link ImportResult#savedImages()}, żeby dało się je usunąć,
+ * Pliki obrazów zapisane przy imporcie są w {@code ImportResult.savedImages()}, żeby dało się je usunąć,
  * jeśli zapis w bazie się nie uda.
  */
 public class CsvImportExportService {
@@ -51,19 +51,34 @@ public class CsvImportExportService {
     private static final String EOL = "\r\n";
     private static final char BOM = '﻿';
 
-    // Wynik importu: nowe fiszki (id 0, domyślny stan SM-2), opisy pominiętych wierszy
-    // i nazwy plików obrazów zapisanych z kolumny imageData
+    /**
+     * Wynik importu.
+     * @param flashcards nowe fiszki (id 0, domyślny stan SM-2), jeszcze niezapisane w bazie
+     * @param skippedRows opisy pominiętych wierszy, z numerem linii w pliku
+     * @param savedImages nazwy plików obrazów zapisanych z kolumny imageData
+     */
     public record ImportResult(List<Flashcard> flashcards, List<String> skippedRows, List<String> savedImages) {}
 
-    // Jeden rekord CSV; error != null oznacza wiersz, którego nie dało się poprawnie odczytać
+    /** Jeden rekord CSV; error != null oznacza wiersz, którego nie dało się poprawnie odczytać. */
     private record CsvRecord(int line, List<String> fields, String error) {}
 
     private final ImageManager imageManager;
 
+    /**
+     * Serwis zapisujący i odczytujący obrazy przez podany menedżer.
+     * @param imageManager zapis obrazów przy imporcie i odczyt przy eksporcie
+     */
     public CsvImportExportService(ImageManager imageManager) {
         this.imageManager = imageManager;
     }
 
+    /**
+     * Odczytuje fiszki z pliku CSV (format w opisie klasy). Błędne wiersze są pomijane.
+     * Gdy import zostanie przerwany wyjątkiem, zapisane do tej pory obrazy są usuwane.
+     * @param file plik CSV w UTF-8
+     * @return fiszki do zapisania, pominięte wiersze i zapisane obrazy
+     * @throws java.io.UncheckedIOException gdy nie udało się odczytać pliku lub zapisać obrazu
+     */
     public ImportResult importFromCsv(File file) {
         String content;
         try {
@@ -135,6 +150,12 @@ public class CsvImportExportService {
         return new ImportResult(flashcards, skippedRows, savedImages);
     }
 
+    /**
+     * Zapisuje fiszki do pliku CSV (format w opisie klasy). Brak pliku obrazu nie przerywa eksportu.
+     * @param flashcards fiszki do eksportu
+     * @param file plik docelowy (nadpisywany)
+     * @throws java.io.UncheckedIOException gdy nie udało się zapisać pliku
+     */
     public void exportToCsv(List<Flashcard> flashcards, File file) {
         try (BufferedWriter writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
             writer.write(BOM);
@@ -155,8 +176,10 @@ public class CsvImportExportService {
         }
     }
 
-    // Base64 nie zawiera przecinków, cudzysłowów ani nowych linii, więc nie wymaga cytowania.
-    // Brak pliku obrazu nie przerywa eksportu: fiszka trafia do pliku bez obrazu.
+    /**
+     * Base64 nie zawiera przecinków, cudzysłowów ani nowych linii, więc nie wymaga cytowania.
+     * Brak pliku obrazu nie przerywa eksportu: fiszka trafia do pliku bez obrazu.
+     */
     private String encodeImage(String imagePath, File file) {
         if (imagePath == null || imagePath.isBlank()) {
             return "";
@@ -194,7 +217,7 @@ public class CsvImportExportService {
                 && fields.get(1).trim().equalsIgnoreCase("back");
     }
 
-    // Prosty parser RFC 4180: pola w cudzysłowach mogą zawierać przecinki, "" i nowe linie
+    /** Prosty parser RFC 4180: pola w cudzysłowach mogą zawierać przecinki, "" i nowe linie. */
     private static List<CsvRecord> parse(String text) {
         List<CsvRecord> records = new ArrayList<>();
         int n = text.length();

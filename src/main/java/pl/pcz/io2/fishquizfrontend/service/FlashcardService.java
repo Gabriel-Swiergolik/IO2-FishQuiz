@@ -13,9 +13,11 @@ import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Optional;
 
-// Operacje na fiszkach wywoływane z widoków: łączy DAO, pliki obrazów i log akcji.
-// Bez JavaFX UI, więc da się to testować na tymczasowej bazie. Metody blokują (baza, pliki),
-// dlatego kontrolery wołają je przez FxTasks.
+/**
+ * Operacje na fiszkach wywoływane z widoków: łączy DAO, pliki obrazów i log akcji.
+ * Bez JavaFX UI, więc da się to testować na tymczasowej bazie. Metody blokują (baza, pliki),
+ * dlatego kontrolery wołają je przez FxTasks.
+ */
 public class FlashcardService {
     private static final Logger log = LoggerFactory.getLogger(FlashcardService.class);
 
@@ -24,6 +26,13 @@ public class FlashcardService {
     private final CsvImportExportService csvService;
     private final ActionLogger actionLogger;
 
+    /**
+     * Serwis na podanych zależnościach (w aplikacji tworzy go {@link pl.pcz.io2.fishquizfrontend.AppContext}).
+     * @param flashcardDAO dostęp do fiszek
+     * @param imageManager pliki obrazów
+     * @param csvService format CSV (import i eksport)
+     * @param actionLogger log akcji użytkownika
+     */
     public FlashcardService(FlashcardDAO flashcardDAO, ImageManager imageManager,
                             CsvImportExportService csvService, ActionLogger actionLogger) {
         this.flashcardDAO = flashcardDAO;
@@ -32,13 +41,26 @@ public class FlashcardService {
         this.actionLogger = actionLogger;
     }
 
+    /**
+     * Odczytuje wszystkie fiszki do wyświetlenia na liście.
+     * @return wszystkie fiszki jako DTO (bez wczytanych obrazów)
+     * @throws DataAccessException gdy operacja na bazie się nie uda
+     */
     public List<FlashcardDTO> findAll() {
         return flashcardDAO.findAll().stream().map(FlashcardMapper::toDto).toList();
     }
 
-    // Zapis z formularza. dto.getId() == 0 → nowa fiszka, inaczej edycja istniejącej (stan SM-2 zostaje).
-    // newImage: nowo wybrany plik (albo null); removeImage: użytkownik usunął obrazek.
-    // Poprzedni plik obrazu jest kasowany dopiero po udanym zapisie w bazie.
+    /**
+     * Zapis z formularza. dto.getId() == 0 → nowa fiszka, inaczej edycja istniejącej (stan SM-2 zostaje).
+     * Poprzedni plik obrazu jest kasowany dopiero po udanym zapisie w bazie.
+     * @param dto dane z formularza (awers, rewers, id)
+     * @param newImage nowo wybrany plik obrazu albo {@code null}
+     * @param removeImage {@code true}, gdy użytkownik usunął obrazek
+     * @return zapisana fiszka (z nadanym id)
+     * @throws IllegalArgumentException gdy awers lub rewers jest pusty albo format obrazu jest nieobsługiwany
+     * @throws DataAccessException gdy zapis się nie uda albo edytowana fiszka została w międzyczasie usunięta
+     * @throws java.io.UncheckedIOException gdy nie udało się skopiować obrazu
+     */
     public Flashcard save(FlashcardDTO dto, File newImage, boolean removeImage) {
         if (!FlashcardValidator.validate(dto.getFrontText(), dto.getBackText()).isValid()) {
             throw new IllegalArgumentException("Awers i rewers fiszki są wymagane");
@@ -80,7 +102,11 @@ public class FlashcardService {
         }
     }
 
-    // Usuwa fiszkę i (jeśli nikt inny go nie używa) jej plik obrazu
+    /**
+     * Usuwa fiszkę i (jeśli nikt inny go nie używa) jej plik obrazu.
+     * @param id identyfikator fiszki
+     * @throws DataAccessException gdy operacja na bazie się nie uda
+     */
     public void delete(int id) {
         Optional<Flashcard> card = flashcardDAO.read(id);
         flashcardDAO.delete(id);
@@ -92,7 +118,14 @@ public class FlashcardService {
         });
     }
 
-    // Import CSV: poprawne wiersze trafiają do bazy w jednej transakcji, pominięte są w wyniku
+    /**
+     * Import CSV: poprawne wiersze trafiają do bazy w jednej transakcji, pominięte są w wyniku.
+     * Obrazy odtworzone z pliku są usuwane, jeśli zapis w bazie się nie uda.
+     * @param file plik CSV
+     * @return zaimportowane fiszki (z id), pominięte wiersze i zapisane obrazy
+     * @throws java.io.UncheckedIOException gdy nie udało się odczytać pliku
+     * @throws DataAccessException gdy zapis w bazie się nie uda (nic nie zostaje zapisane)
+     */
     public CsvImportExportService.ImportResult importCsv(File file) {
         CsvImportExportService.ImportResult result = csvService.importFromCsv(file);
         try {
@@ -107,7 +140,13 @@ public class FlashcardService {
         return result;
     }
 
-    // Zwraca liczbę wyeksportowanych fiszek
+    /**
+     * Eksportuje wszystkie fiszki (z obrazami w Base64) do pliku CSV.
+     * @param file plik docelowy (nadpisywany)
+     * @return liczba wyeksportowanych fiszek
+     * @throws java.io.UncheckedIOException gdy nie udało się zapisać pliku
+     * @throws DataAccessException gdy odczyt z bazy się nie uda
+     */
     public int exportCsv(File file) {
         List<Flashcard> flashcards = flashcardDAO.findAll();
         csvService.exportToCsv(flashcards, file);
@@ -115,8 +154,10 @@ public class FlashcardService {
         return flashcards.size();
     }
 
-    // Kasuje plik obrazu, chyba że używa go inna fiszka (np. po eksporcie i imporcie CSV
-    // dwie fiszki wskazują ten sam plik). Liczba fiszek jest mała, więc wystarczy findAll.
+    /**
+     * Kasuje plik obrazu, chyba że używa go inna fiszka (np. po eksporcie i imporcie CSV
+     * dwie fiszki wskazują ten sam plik). Liczba fiszek jest mała, więc wystarczy findAll.
+     */
     private void deleteImageIfUnused(String path, int excludingId) {
         boolean usedElsewhere = flashcardDAO.findAll().stream()
                 .anyMatch(other -> other.getId() != excludingId && path.equals(other.getImagePath()));
@@ -125,7 +166,7 @@ public class FlashcardService {
         }
     }
 
-    // Zmiana w bazie już się udała, więc problem z plikiem tylko logujemy
+    /** Zmiana w bazie już się udała, więc problem z plikiem tylko logujemy. */
     private void deleteImageQuietly(String path) {
         try {
             imageManager.deleteImage(path);

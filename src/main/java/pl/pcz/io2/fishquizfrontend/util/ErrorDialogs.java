@@ -9,13 +9,17 @@ import org.slf4j.LoggerFactory;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-// Wspólne okno błędu: krótki opis po polsku, szczegóły (stos wywołań) do rozwinięcia
+/** Wspólne okno błędu: krótki opis po polsku, szczegóły (stos wywołań) do rozwinięcia. */
 public final class ErrorDialogs {
     private static final Logger log = LoggerFactory.getLogger(ErrorDialogs.class);
 
     private ErrorDialogs() {}
 
-    // Można wołać z dowolnego wątku
+    /**
+     * Zapisuje błąd w logu i pokazuje okno błędu. Można wołać z dowolnego wątku.
+     * @param message krótki opis po polsku (nagłówek okna)
+     * @param error przyczyna; jej komunikat i stos wywołań są w oknie (może być {@code null})
+     */
     public static void show(String message, Throwable error) {
         log.error(message, error);
         if (Platform.isFxApplicationThread()) {
@@ -25,7 +29,9 @@ public final class ErrorDialogs {
         }
     }
 
-    // Ostatnia linia obrony: wyjątek, którego nikt nie złapał (w dowolnym wątku), też trafia do okna błędu
+    /**
+     * Ostatnia linia obrony: wyjątek, którego nikt nie złapał (w dowolnym wątku), też trafia do okna błędu.
+     */
     public static void installUncaughtExceptionHandler() {
         Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
             try {

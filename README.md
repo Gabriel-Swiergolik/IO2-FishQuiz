@@ -76,6 +76,18 @@ Excel z polskimi ustawieniami oczekuje separatora `;`, więc plik najlepiej otwo
 Dane → Z tekstu/CSV (LibreOffice sam pyta o separator). Excel obcina komórki dłuższe niż 32 767 znaków,
 więc pliku z dużymi obrazkami nie należy w nim zapisywać.
 
+## Dokumentacja techniczna
+Dokumentację kodu (HTML) generuje [Doxygen](https://www.doxygen.nl/) z komentarzy `/** */` w `src/main/java`.
+Konfiguracja jest w `Doxyfile` (po polsku, bez wykresów, więc Graphviz nie jest potrzebny):
+
+```bash
+doxygen Doxyfile
+```
+
+Wynik trafia do `docs/doxygen/` (w `.gitignore`); strona startowa to `docs/doxygen/index.html`.
+Nowe klasy i publiczne metody opisujemy komentarzem `/** */` po polsku z tagami Javadoc
+(`@param`, `@return`, `@throws`); komentarze wewnątrz metod zostają jako `//`.
+
 ## CI
 GitHub Actions (`.github/workflows/build.yml`) uruchamia `./mvnw -B verify` (JDK 21, Temurin) przy każdym pushu
 i pull requeście do `develop` i `main`.

@@ -31,14 +31,16 @@ import pl.pcz.io2.fishquizfrontend.util.FxTasks;
 import java.io.IOException;
 import java.util.List;
 
-// Zakładka "Quiz" (quiz-view.fxml): powtórka fiszek na dziś albo jednego zestawu z oceną wg SM-2.
-// Stan sesji (kolejka, pozycja, oceny) trzyma QuizSession.
+/**
+ * Zakładka "Quiz" (quiz-view.fxml): powtórka fiszek na dziś albo jednego zestawu z oceną wg SM-2.
+ * Stan sesji (kolejka, pozycja, oceny) trzyma QuizSession.
+ */
 public class QuizController {
     private final QuizSession session;
     private final QuizSetService quizSetService;
     private final ImageManager imageManager;
     private final FxTasks fxTasks;
-    // Do okna zestawów, żeby jego kontroler też dostał zależności z AppContext
+    /** Do okna zestawów, żeby jego kontroler też dostał zależności z AppContext. */
     private final Callback<Class<?>, Object> controllerFactory;
 
     @FXML private VBox startPane;
@@ -59,9 +61,17 @@ public class QuizController {
     @FXML private Label summaryLabel;
 
     private final BooleanProperty busy = new SimpleBooleanProperty();
-    // Pierwsza pozycja listy zestawów (id 0): wszystkie fiszki do powtórki, jak przed zestawami
+    /** Pierwsza pozycja listy zestawów (id 0): wszystkie fiszki do powtórki, jak przed zestawami. */
     private final QuizDTO allDue = new QuizDTO("Wszystkie fiszki do powtórki");
 
+    /**
+     * Kontroler tworzony przez fabrykę z {@link pl.pcz.io2.fishquizfrontend.AppContext}.
+     * @param session stan sesji powtórki
+     * @param quizSetService lista zestawów
+     * @param imageManager obrazy na odwrocie fiszki
+     * @param fxTasks praca w tle
+     * @param controllerFactory fabryka kontrolerów dla okna zestawów
+     */
     public QuizController(QuizSession session, QuizSetService quizSetService, ImageManager imageManager,
                           FxTasks fxTasks, Callback<Class<?>, Object> controllerFactory) {
         this.session = session;
@@ -105,7 +115,7 @@ public class QuizController {
         showOnly(startPane);
     }
 
-    // Wołane przez HomeController przy wejściu na zakładkę: zestawy mogły się zmienić
+    /** Wołane przez HomeController przy wejściu na zakładkę: zestawy mogły się zmienić. */
     public void refreshSets() {
         fxTasks.run(busy, "Nie udało się wczytać zestawów.", quizSetService::findAll, sets -> {
             int selectedId = setCombo.getValue() == null ? 0 : setCombo.getValue().getId();
@@ -116,6 +126,7 @@ public class QuizController {
         });
     }
 
+    /** Rozpoczyna sesję dla wybranego zestawu (albo wszystkich fiszek do powtórki). */
     @FXML
     private void onStart() {
         startInfoLabel.setText("");
@@ -135,6 +146,7 @@ public class QuizController {
                 });
     }
 
+    /** Otwiera modalne okno zestawów, a po jego zamknięciu odświeża listę zestawów. */
     @FXML
     private void onManageSets() {
         FXMLLoader loader = new FXMLLoader(
@@ -175,6 +187,7 @@ public class QuizController {
         showOnly(startPane);
     }
 
+    /** Zapisuje ocenę w tle i pokazuje następną fiszkę albo podsumowanie. */
     private void grade(AnswerQuality quality) {
         fxTasks.run(busy, "Nie udało się zapisać oceny fiszki.", () -> {
             session.grade(quality);

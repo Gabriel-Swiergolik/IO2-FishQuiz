@@ -22,9 +22,11 @@ import pl.pcz.io2.fishquizfrontend.util.FxTasks;
 import java.util.Map;
 import java.util.function.Supplier;
 
-// Jedno miejsce, w którym powstają DAO i serwisy (po jednym egzemplarzu na aplikację).
-// Kontrolery dostają je przez konstruktor z fabryki podpiętej do FXMLLoader.
-// Tworzyć po DatabaseManager.init().
+/**
+ * Jedno miejsce, w którym powstają DAO i serwisy (po jednym egzemplarzu na aplikację).
+ * Kontrolery dostają je przez konstruktor z fabryki podpiętej do FXMLLoader.
+ * Tworzyć po DatabaseManager.init(); przy błędzie przygotowania DAO konstruktor rzuca DataAccessException.
+ */
 public class AppContext {
     private final FlashcardDAO flashcardDAO = new FlashcardDAOImpl();
     private final QuizDAO quizDAO = new QuizDAOImpl();
@@ -46,6 +48,12 @@ public class AppContext {
             QuizSetsController.class, () -> new QuizSetsController(quizSetService, flashcardService, fxTasks)
     );
 
+    /**
+     * Fabryka kontrolerów dla {@code FXMLLoader.setControllerFactory}; działa też dla plików z fx:include.
+     * Każde wywołanie fabryki tworzy nowy kontroler.
+     * @return fabryka tworząca kontroler danej klasy z zależnościami z tego kontekstu
+     * @throws IllegalArgumentException (przy wywołaniu fabryki) dla nieznanej klasy kontrolera
+     */
     public Callback<Class<?>, Object> controllerFactory() {
         return type -> {
             Supplier<Object> supplier = controllers.get(type);
@@ -56,6 +64,9 @@ public class AppContext {
         };
     }
 
+    /**
+     * Kończy zadania w tle ({@link pl.pcz.io2.fishquizfrontend.util.FxTasks#shutdown()}); wołać przed zamknięciem bazy.
+     */
     public void shutdown() {
         fxTasks.shutdown();
     }

@@ -20,7 +20,7 @@ import pl.pcz.io2.fishquizfrontend.util.FxTasks;
 
 import java.io.File;
 
-// Zakładka "Dodawanie fiszek" (flashcard-form.fxml): nowa fiszka albo edycja istniejącej
+/** Zakładka "Dodawanie fiszek" (flashcard-form.fxml): nowa fiszka albo edycja istniejącej. */
 public class FlashcardController {
     private static final String INVALID = "invalid";
 
@@ -47,6 +47,12 @@ public class FlashcardController {
     private boolean imageRemoved;
     private Runnable onEditFinished;
 
+    /**
+     * Kontroler tworzony przez fabrykę z {@link pl.pcz.io2.fishquizfrontend.AppContext}.
+     * @param flashcardService zapis fiszek
+     * @param imageManager podgląd obrazów
+     * @param fxTasks praca w tle
+     */
     public FlashcardController(FlashcardService flashcardService, ImageManager imageManager, FxTasks fxTasks) {
         this.flashcardService = flashcardService;
         this.imageManager = imageManager;
@@ -70,12 +76,18 @@ public class FlashcardController {
         backArea.textProperty().addListener((obs, old, text) -> markInvalid(backArea, false));
     }
 
-    // Wołane po zapisaniu edycji albo anulowaniu (HomeController wraca wtedy do listy)
+    /**
+     * Wołane po zapisaniu edycji albo anulowaniu (HomeController wraca wtedy do listy).
+     * @param onEditFinished akcja do wywołania (może być {@code null})
+     */
     public void setOnEditFinished(Runnable onEditFinished) {
         this.onEditFinished = onEditFinished;
     }
 
-    // Wypełnia formularz fiszką z listy; zapis zaktualizuje ją zamiast tworzyć nową
+    /**
+     * Wypełnia formularz fiszką z listy; zapis zaktualizuje ją zamiast tworzyć nową.
+     * @param dto edytowana fiszka (z listy)
+     */
     public void loadForEdit(FlashcardDTO dto) {
         clearForm();
         editingId = dto.getId();
@@ -86,6 +98,7 @@ public class FlashcardController {
         imagePreview.setImage(imageManager.loadImage(dto.getImagePath()));
     }
 
+    /** Wybór obrazka z dysku; plik jest kopiowany dopiero przy zapisie fiszki. */
     @FXML
     private void onChooseImage() {
         FileChooser chooser = new FileChooser();
@@ -114,6 +127,7 @@ public class FlashcardController {
         imagePreview.setImage(null);
     }
 
+    /** Sprawdza formularz i zapisuje fiszkę w tle; po edycji wraca do listy. */
     @FXML
     private void onSave() {
         FlashcardValidator.Result validation = FlashcardValidator.validate(frontField.getText(), backArea.getText());

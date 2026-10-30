@@ -6,23 +6,36 @@ import pl.pcz.io2.fishquizfrontend.model.Flashcard;
 import java.time.Clock;
 import java.time.LocalDate;
 
-// Algorytm SM-2: na podstawie oceny odpowiedzi (0–5) ustala kolejną datę powtórki.
-// Tylko logika; zapis zmienionej fiszki do bazy należy do wywołującego.
+/**
+ * Algorytm SM-2: na podstawie oceny odpowiedzi (0–5) ustala kolejną datę powtórki.
+ * Tylko logika; zapis zmienionej fiszki do bazy należy do wywołującego.
+ */
 public class SpacedRepetitionService {
     private static final double MIN_EASINESS_FACTOR = 1.3;
 
     private final Clock clock;
 
+    /** Serwis z zegarem systemowym. */
     public SpacedRepetitionService() {
         this(Clock.systemDefaultZone());
     }
 
-    // Zegar do wstrzyknięcia w testach
+    /**
+     * Serwis z podanym zegarem (do wstrzyknięcia w testach).
+     * @param clock zegar wyznaczający "dziś"
+     */
     public SpacedRepetitionService(Clock clock) {
         this.clock = clock;
     }
 
-    // Zmienia przekazaną fiszkę i ją zwraca
+    /**
+     * Przelicza stan SM-2 po ocenie. Ocena poniżej 3 zaczyna naukę od nowa (odstęp 1 dzień);
+     * w przeciwnym razie odstęp wynosi 1, potem 6 dni, potem poprzedni odstęp razy EF.
+     * EF zmienia się przy każdej ocenie, ale nie spada poniżej 1.3. Zapis do bazy należy do wywołującego.
+     * @param flashcard fiszka, zmieniana w miejscu
+     * @param quality ocena odpowiedzi
+     * @return ta sama fiszka (po zmianie)
+     */
     public Flashcard calculateNextReview(Flashcard flashcard, AnswerQuality quality) {
         int q = quality.getValue();
         double easiness = flashcard.getEasinessFactor();

@@ -4,8 +4,10 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 
-// Kontroler głównego okna (main-view.fxml). Zakładki przełącza TabPane,
-// a tu tylko łączymy widoki: odświeżanie listy i zestawów oraz przejście do edycji.
+/**
+ * Kontroler głównego okna (main-view.fxml). Zakładki przełącza TabPane,
+ * a tu tylko łączymy widoki: odświeżanie listy i zestawów oraz przejście do edycji.
+ */
 public class HomeController {
     @FXML private TabPane tabPane;
     @FXML private Tab formTab;
@@ -17,6 +19,9 @@ public class HomeController {
     @FXML private FlashcardListController listController;
     @FXML private QuizController quizController;
 
+    /**
+     * Łączy kontrolery zakładek: edycja z listy przechodzi do formularza, wejście na listę lub quiz odświeża dane.
+     */
     @FXML
     private void initialize() {
         formController.setOnEditFinished(() -> tabPane.getSelectionModel().select(listTab));

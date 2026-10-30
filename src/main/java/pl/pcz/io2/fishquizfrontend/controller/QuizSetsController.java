@@ -27,8 +27,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-// Okno "Zarządzaj zestawami" (quiz-sets-dialog.fxml): zestawy po lewej, a po prawej
-// lista wszystkich fiszek z polami wyboru dla wybranego zestawu
+/**
+ * Okno "Zarządzaj zestawami" (quiz-sets-dialog.fxml): zestawy po lewej, a po prawej
+ * lista wszystkich fiszek z polami wyboru dla wybranego zestawu.
+ */
 public class QuizSetsController {
     private final QuizSetService quizSetService;
     private final FlashcardService flashcardService;
@@ -45,12 +47,18 @@ public class QuizSetsController {
 
     private final ObservableList<QuizDTO> sets = FXCollections.observableArrayList();
     private final ObservableList<FlashcardDTO> cards = FXCollections.observableArrayList();
-    // Stan pól wyboru: id fiszki → czy jest w wybranym zestawie
+    /** Stan pól wyboru: id fiszki → czy jest w wybranym zestawie. */
     private final Map<Integer, BooleanProperty> checked = new HashMap<>();
     private final BooleanProperty busy = new SimpleBooleanProperty();
 
     private record Data(List<QuizDTO> sets, List<FlashcardDTO> cards) {}
 
+    /**
+     * Kontroler tworzony przez fabrykę z {@link pl.pcz.io2.fishquizfrontend.AppContext}.
+     * @param quizSetService operacje na zestawach
+     * @param flashcardService lista wszystkich fiszek
+     * @param fxTasks praca w tle
+     */
     public QuizSetsController(QuizSetService quizSetService, FlashcardService flashcardService, FxTasks fxTasks) {
         this.quizSetService = quizSetService;
         this.flashcardService = flashcardService;
@@ -130,6 +138,7 @@ public class QuizSetsController {
                 }));
     }
 
+    /** Usuwa zaznaczony zestaw po potwierdzeniu; fiszki zostają. */
     @FXML
     private void onDelete() {
         QuizDTO selected = setList.getSelectionModel().getSelectedItem();
@@ -154,6 +163,7 @@ public class QuizSetsController {
         });
     }
 
+    /** Zapisuje zaznaczone fiszki jako skład wybranego zestawu. */
     @FXML
     private void onSaveAssignment() {
         QuizDTO selected = setList.getSelectionModel().getSelectedItem();
@@ -172,7 +182,7 @@ public class QuizSetsController {
         }, ignored -> statusLabel.setText("Zapisano zestaw „" + selected.getTitle() + "”: fiszek " + ids.size() + "."));
     }
 
-    // Zaznacza fiszki należące do wybranego zestawu
+    /** Zaznacza fiszki należące do wybranego zestawu. */
     private void loadAssignment(QuizDTO set) {
         checked.values().forEach(property -> property.set(false));
         if (set == null) {
@@ -194,7 +204,7 @@ public class QuizSetsController {
         checked.forEach((cardId, property) -> property.set(ids.contains(cardId)));
     }
 
-    // Po zmianie zestawów wczytuje listę od nowa i zaznacza zestaw o podanym id (0 = żaden)
+    /** Po zmianie zestawów wczytuje listę od nowa i zaznacza zestaw o podanym id (0 = żaden). */
     private void reloadSets(int selectId) {
         fxTasks.run(busy, "Nie udało się wczytać zestawów.", quizSetService::findAll, list -> {
             sets.setAll(list);
@@ -203,7 +213,7 @@ public class QuizSetsController {
         });
     }
 
-    // Pyta o nazwę zestawu; pusta nazwa → ostrzeżenie i brak wyniku
+    /** Pyta o nazwę zestawu; pusta nazwa → ostrzeżenie i brak wyniku. */
     private Optional<String> askTitle(String header, String initial) {
         TextInputDialog dialog = new TextInputDialog(initial);
         dialog.initOwner(setList.getScene().getWindow());

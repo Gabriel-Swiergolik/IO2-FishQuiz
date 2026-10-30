@@ -33,7 +33,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.function.Consumer;
 
-// Zakładka "Przeglądanie" (flashcard-list.fxml)
+/** Zakładka "Przeglądanie" (flashcard-list.fxml). */
 public class FlashcardListController {
     private static final int BACK_PREVIEW_LENGTH = 60;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
@@ -59,6 +59,11 @@ public class FlashcardListController {
     private final BooleanProperty busy = new SimpleBooleanProperty();
     private Consumer<FlashcardDTO> onEditRequested;
 
+    /**
+     * Kontroler tworzony przez fabrykę z {@link pl.pcz.io2.fishquizfrontend.AppContext}.
+     * @param flashcardService odczyt, usuwanie, import i eksport fiszek
+     * @param fxTasks praca w tle
+     */
     public FlashcardListController(FlashcardService flashcardService, FxTasks fxTasks) {
         this.flashcardService = flashcardService;
         this.fxTasks = fxTasks;
@@ -114,11 +119,15 @@ public class FlashcardListController {
         });
     }
 
-    // Wołane przez HomeController, gdy użytkownik chce edytować fiszkę w formularzu
+    /**
+     * Wołane przez HomeController, gdy użytkownik chce edytować fiszkę w formularzu.
+     * @param onEditRequested odbiorca wybranej fiszki (może być {@code null})
+     */
     public void setOnEditRequested(Consumer<FlashcardDTO> onEditRequested) {
         this.onEditRequested = onEditRequested;
     }
 
+    /** Wczytuje fiszki z bazy od nowa (w tle). */
     public void refresh() {
         fxTasks.run(busy, "Nie udało się wczytać fiszek.", flashcardService::findAll, cards::setAll);
     }
@@ -131,6 +140,7 @@ public class FlashcardListController {
         }
     }
 
+    /** Usuwa zaznaczoną fiszkę po potwierdzeniu i odświeża listę. */
     @FXML
     private void onDelete() {
         FlashcardDTO selected = table.getSelectionModel().getSelectedItem();
@@ -154,6 +164,7 @@ public class FlashcardListController {
         });
     }
 
+    /** Importuje fiszki z wybranego pliku CSV i pokazuje podsumowanie z pominiętymi wierszami. */
     @FXML
     private void onImport() {
         File file = csvChooser("Importuj fiszki z pliku CSV").showOpenDialog(window());
@@ -167,6 +178,7 @@ public class FlashcardListController {
         });
     }
 
+    /** Eksportuje wszystkie fiszki do wybranego pliku CSV. */
     @FXML
     private void onExport() {
         FileChooser chooser = csvChooser("Eksportuj fiszki do pliku CSV");
@@ -225,7 +237,7 @@ public class FlashcardListController {
         return text != null && text.toLowerCase(Locale.ROOT).contains(lowerQuery);
     }
 
-    // Pierwsza linia rewersu, skrócona do szerokości kolumny
+    /** Pierwsza linia rewersu, skrócona do szerokości kolumny. */
     private static String preview(String text) {
         if (text == null) {
             return "";

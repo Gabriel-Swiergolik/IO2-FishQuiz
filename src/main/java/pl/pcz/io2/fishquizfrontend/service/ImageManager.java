@@ -11,24 +11,36 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
-// Obrazy fiszek kopiujemy do własnego katalogu, żeby nie zależeć od miejsca oryginału.
-// W bazie zapisujemy ścieżkę względną (samą nazwę pliku w katalogu obrazów).
+/**
+ * Obrazy fiszek kopiujemy do własnego katalogu, żeby nie zależeć od miejsca oryginału.
+ * W bazie zapisujemy ścieżkę względną (samą nazwę pliku w katalogu obrazów).
+ */
 public class ImageManager {
-    // Formaty, które JavaFX potrafi wyświetlić
+    /** Formaty, które JavaFX potrafi wyświetlić. */
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("png", "jpg", "jpeg", "gif", "bmp");
 
     private final Path imagesDir;
 
-    // Domyślnie images/ w katalogu roboczym, czyli obok database.db
+    /** Domyślnie images/ w katalogu roboczym, czyli obok database.db. */
     public ImageManager() {
         this(Path.of("images"));
     }
 
+    /**
+     * Menedżer z własnym katalogiem obrazów (np. tymczasowym w testach).
+     * @param imagesDir katalog obrazów; tworzony przy pierwszym zapisie
+     */
     public ImageManager(Path imagesDir) {
         this.imagesDir = imagesDir;
     }
 
-    // Kopiuje plik pod unikalną nazwą (UUID + rozszerzenie) i zwraca ścieżkę względną
+    /**
+     * Kopiuje plik pod unikalną nazwą (UUID + rozszerzenie) i zwraca ścieżkę względną.
+     * @param sourceFile plik wybrany przez użytkownika
+     * @return nazwa nowego pliku w katalogu obrazów
+     * @throws IllegalArgumentException gdy rozszerzenie nie jest jednym z: png, jpg, jpeg, gif, bmp
+     * @throws java.io.UncheckedIOException gdy kopiowanie się nie uda
+     */
     public String saveImage(File sourceFile) {
         String fileName = UUID.randomUUID() + "." + checkedExtension(sourceFile.getName());
         try {
@@ -40,7 +52,14 @@ public class ImageManager {
         return fileName;
     }
 
-    // Zapisuje bajty obrazu (np. z importu CSV) pod unikalną nazwą; rozszerzenie bierzemy z originalName
+    /**
+     * Zapisuje bajty obrazu (np. z importu CSV) pod unikalną nazwą; rozszerzenie bierzemy z originalName.
+     * @param data zawartość pliku obrazu
+     * @param originalName nazwa, z której brane jest rozszerzenie
+     * @return nazwa nowego pliku w katalogu obrazów
+     * @throws IllegalArgumentException gdy rozszerzenie nie jest jednym z: png, jpg, jpeg, gif, bmp
+     * @throws java.io.UncheckedIOException gdy zapis się nie uda
+     */
     public String saveImage(byte[] data, String originalName) {
         String fileName = UUID.randomUUID() + "." + checkedExtension(originalName);
         try {
@@ -52,13 +71,21 @@ public class ImageManager {
         return fileName;
     }
 
-    // Ścieżki względne liczymy od katalogu obrazów; bezwzględne (stare dane) zostają bez zmian
+    /**
+     * Ścieżki względne liczymy od katalogu obrazów; bezwzględne (stare dane) zostają bez zmian.
+     * @param path ścieżka zapisana w fiszce
+     * @return ścieżka do pliku na dysku
+     */
     public Path resolvePath(String path) {
         Path p = Path.of(path);
         return p.isAbsolute() ? p : imagesDir.resolve(p);
     }
 
-    // null, jeśli fiszka nie ma obrazu, pliku już nie ma albo nie da się go odczytać jako obrazu
+    /**
+     * Wczytuje obraz do wyświetlenia (wymaga działającego JavaFX).
+     * @param path ścieżka zapisana w fiszce albo {@code null}
+     * @return obraz albo {@code null}, jeśli fiszka nie ma obrazu, pliku już nie ma albo nie da się go odczytać jako obrazu
+     */
     public Image loadImage(String path) {
         if (path == null || path.isBlank()) return null;
         Path file = resolvePath(path);
@@ -68,7 +95,11 @@ public class ImageManager {
         return image.isError() ? null : image;
     }
 
-    // Brak pliku nie jest błędem
+    /**
+     * Usuwa plik obrazu. Brak pliku nie jest błędem.
+     * @param path ścieżka zapisana w fiszce; {@code null} lub pusta nic nie robi
+     * @throws java.io.UncheckedIOException gdy usunięcie się nie uda
+     */
     public void deleteImage(String path) {
         if (path == null || path.isBlank()) return;
         try {

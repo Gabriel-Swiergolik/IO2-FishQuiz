@@ -15,20 +15,31 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-// Zestawy fiszek (Quiz): tworzenie, zmiana nazwy, usuwanie i przypisywanie fiszek.
-// Bez JavaFX UI; metody blokują (baza), więc kontrolery wołają je przez FxTasks.
+/**
+ * Zestawy fiszek (Quiz): tworzenie, zmiana nazwy, usuwanie i przypisywanie fiszek.
+ * Bez JavaFX UI; metody blokują (baza), więc kontrolery wołają je przez FxTasks.
+ */
 public class QuizSetService {
     private static final Comparator<String> POLISH_ORDER = Collator.getInstance(Locale.of("pl", "PL"))::compare;
 
     private final QuizDAO quizDAO;
     private final ActionLogger actionLogger;
 
+    /**
+     * Serwis na podanych zależnościach (w aplikacji tworzy go {@link pl.pcz.io2.fishquizfrontend.AppContext}).
+     * @param quizDAO dostęp do zestawów
+     * @param actionLogger log akcji użytkownika
+     */
     public QuizSetService(QuizDAO quizDAO, ActionLogger actionLogger) {
         this.quizDAO = quizDAO;
         this.actionLogger = actionLogger;
     }
 
-    // Zestawy alfabetycznie po nazwie (bez fiszek, te wczytuje flashcardIds)
+    /**
+     * Zestawy alfabetycznie po nazwie (bez fiszek, te wczytuje flashcardIds).
+     * @return zestawy posortowane wg polskiego alfabetu
+     * @throws DataAccessException gdy operacja na bazie się nie uda
+     */
     public List<QuizDTO> findAll() {
         return quizDAO.findAll().stream()
                 .map(QuizMapper::toDto)
@@ -36,6 +47,13 @@ public class QuizSetService {
                 .toList();
     }
 
+    /**
+     * Tworzy nowy, pusty zestaw.
+     * @param title nazwa (białe znaki na brzegach są obcinane)
+     * @return zapisany zestaw z nadanym id
+     * @throws IllegalArgumentException gdy nazwa jest pusta
+     * @throws DataAccessException gdy operacja na bazie się nie uda
+     */
     public QuizDTO create(String title) {
         Quiz quiz = new Quiz(0, requireTitle(title));
         quizDAO.create(quiz);
@@ -43,6 +61,13 @@ public class QuizSetService {
         return QuizMapper.toDto(quiz);
     }
 
+    /**
+     * Zmienia nazwę zestawu.
+     * @param id identyfikator zestawu
+     * @param title nowa nazwa (białe znaki na brzegach są obcinane)
+     * @throws IllegalArgumentException gdy nazwa jest pusta
+     * @throws DataAccessException gdy zapis się nie uda albo zestaw został w międzyczasie usunięty
+     */
     public void rename(int id, String title) {
         String newTitle = requireTitle(title);
         Quiz quiz = quizDAO.read(id)
@@ -52,12 +77,22 @@ public class QuizSetService {
         actionLogger.logAction("RENAME_SET", describe(quiz));
     }
 
-    // Usuwa zestaw i jego powiązania; same fiszki zostają
+    /**
+     * Usuwa zestaw i jego powiązania; same fiszki zostają.
+     * @param id identyfikator zestawu
+     * @throws DataAccessException gdy operacja na bazie się nie uda
+     */
     public void delete(int id) {
         quizDAO.delete(id);
         actionLogger.logAction("DELETE_SET", "#" + id);
     }
 
+    /**
+     * Identyfikatory fiszek zestawu.
+     * @param quizId id zestawu
+     * @return id fiszek w kolejności z zestawu
+     * @throws DataAccessException gdy operacja na bazie się nie uda
+     */
     public Set<Integer> flashcardIds(int quizId) {
         Set<Integer> ids = new LinkedHashSet<>();
         for (Flashcard card : quizDAO.getFlashcardsForQuiz(quizId)) {
@@ -66,8 +101,13 @@ public class QuizSetService {
         return ids;
     }
 
-    // Ustawia skład zestawu na selectedIds: nowe fiszki dopisuje na koniec (w podanej kolejności),
-    // odznaczone usuwa, a pozostałe zachowują swoje miejsce
+    /**
+     * Ustawia skład zestawu na selectedIds: nowe fiszki dopisuje na koniec (w podanej kolejności),
+     * odznaczone usuwa, a pozostałe zachowują swoje miejsce.
+     * @param quizId id zestawu
+     * @param selectedIds id fiszek, które mają być w zestawie
+     * @throws DataAccessException gdy operacja na bazie się nie uda
+     */
     public void updateFlashcards(int quizId, Collection<Integer> selectedIds) {
         Set<Integer> current = flashcardIds(quizId);
         Set<Integer> selected = new LinkedHashSet<>(selectedIds);
