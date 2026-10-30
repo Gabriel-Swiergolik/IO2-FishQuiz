@@ -2,10 +2,13 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.TilePane?>
 <?import javafx.scene.layout.VBox?>
@@ -17,6 +20,13 @@
 
     <VBox fx:id="startPane" spacing="15" alignment="CENTER">
         <Label text="Gotowy na powtórkę interwałową?" styleClass="view-title"/>
+        <!-- Pierwsza pozycja to wszystkie fiszki do powtórki, dalej zestawy (QuizController) -->
+        <HBox spacing="8" alignment="CENTER">
+            <Label text="Zestaw:"/>
+            <ComboBox fx:id="setCombo" prefWidth="260"/>
+            <Button fx:id="manageSetsButton" text="Zarządzaj zestawami…" onAction="#onManageSets"/>
+        </HBox>
+        <CheckBox fx:id="dueOnlyCheck" text="Tylko fiszki do powtórki" selected="true"/>
         <Button fx:id="startButton" text="Rozpocznij test" defaultButton="true" onAction="#onStart"/>
         <Label fx:id="startInfoLabel"/>
     </VBox>

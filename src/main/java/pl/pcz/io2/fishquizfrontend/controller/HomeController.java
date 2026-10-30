@@ -5,7 +5,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 
 // Kontroler głównego okna (main-view.fxml). Zakładki przełącza TabPane,
-// a tu tylko łączymy widoki: odświeżanie listy i przejście do edycji.
+// a tu tylko łączymy widoki: odświeżanie listy i zestawów oraz przejście do edycji.
 public class HomeController {
     @FXML private TabPane tabPane;
     @FXML private Tab formTab;
@@ -27,6 +27,11 @@ public class HomeController {
         listTab.selectedProperty().addListener((obs, was, selected) -> {
             if (selected) {
                 listController.refresh();
+            }
+        });
+        quizTab.selectedProperty().addListener((obs, was, selected) -> {
+            if (selected) {
+                quizController.refreshSets();
             }
         });
     }

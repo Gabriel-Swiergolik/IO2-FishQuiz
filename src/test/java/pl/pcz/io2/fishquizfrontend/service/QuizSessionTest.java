@@ -4,8 +4,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import pl.pcz.io2.fishquizfrontend.dao.DataAccessException;
 import pl.pcz.io2.fishquizfrontend.dao.InMemoryFlashcardDAO;
+import pl.pcz.io2.fishquizfrontend.dao.InMemoryQuizDAO;
 import pl.pcz.io2.fishquizfrontend.model.AnswerQuality;
 import pl.pcz.io2.fishquizfrontend.model.Flashcard;
+import pl.pcz.io2.fishquizfrontend.model.Quiz;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -21,12 +23,14 @@ class QuizSessionTest {
     private static final Clock CLOCK = Clock.fixed(TODAY.atTime(10, 0).toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
 
     private InMemoryFlashcardDAO dao;
+    private InMemoryQuizDAO quizDao;
     private QuizSession session;
 
     @BeforeEach
     void setUp() {
         dao = new InMemoryFlashcardDAO();
-        session = new QuizSession(dao, new SpacedRepetitionService(CLOCK), new ActionLogger(), CLOCK);
+        quizDao = new InMemoryQuizDAO(dao);
+        session = new QuizSession(dao, quizDao, new SpacedRepetitionService(CLOCK), new ActionLogger(), CLOCK);
     }
 
     private Flashcard card(String front, LocalDate nextReview) {
@@ -34,6 +38,16 @@ class QuizSessionTest {
         card.setNextReviewDate(nextReview);
         dao.create(card);
         return card;
+    }
+
+    // Zestaw z podanymi fiszkami w tej kolejności; zwraca jego id
+    private int set(String title, Flashcard... cards) {
+        Quiz quiz = new Quiz(0, title);
+        quizDao.create(quiz);
+        for (Flashcard card : cards) {
+            quizDao.addFlashcardToQuiz(quiz.getId(), card.getId());
+        }
+        return quiz.getId();
     }
 
     @Test
@@ -173,5 +187,64 @@ class QuizSessionTest {
 
         assertEquals(card.getId(), session.current().getId());
         assertEquals(0, session.reviewedCount());
+    }
+
+    @Test
+    void setModeKeepsSetOrder() {
+        Flashcard later = card("później", TODAY.minusDays(1));
+        Flashcard earlier = card("wcześniej", TODAY.minusDays(5));
+        int setId = set("Zwierzęta", later, earlier);
+
+        assertEquals(2, session.start(setId, true));
+        // Kolejność zestawu, a nie data powtórki
+        assertEquals(later.getId(), session.current().getId());
+        session.grade(AnswerQuality.GOOD);
+        assertEquals(earlier.getId(), session.current().getId());
+    }
+
+    @Test
+    void setModeDueOnlySkipsFutureCardsAndCardsOutsideTheSet() {
+        Flashcard due = card("kot", TODAY);
+        Flashcard future = card("pies", TODAY.plusDays(3));
+        card("spoza zestawu", TODAY);
+        int setId = set("Zwierzęta", due, future);
+
+        assertEquals(1, session.start(setId, true));
+        assertEquals(due.getId(), session.current().getId());
+    }
+
+    @Test
+    void setModeAllCardsIncludesFutureCards() {
+        Flashcard due = card("kot", TODAY);
+        Flashcard future = card("pies", TODAY.plusDays(3));
+        int setId = set("Zwierzęta", future, due);
+
+        assertEquals(2, session.start(setId, false));
+        assertEquals(future.getId(), session.current().getId());
+    }
+
+    @Test
+    void setModeWithEmptyOrUnknownSetHasNoCards() {
+        card("kot", TODAY);
+        int empty = set("Pusty");
+
+        assertEquals(0, session.start(empty, false));
+        assertTrue(session.isFinished());
+        assertEquals(0, session.start(999, true));
+    }
+
+    @Test
+    void gradingInSetModeSavesSm2State() {
+        Flashcard future = card("pies", TODAY.plusDays(3));
+        int setId = set("Zwierzęta", future);
+        session.start(setId, false);
+
+        session.grade(AnswerQuality.PERFECT);
+
+        Flashcard stored = dao.read(future.getId()).orElseThrow();
+        assertEquals(1, stored.getRepetitions());
+        assertEquals(TODAY.plusDays(1), stored.getNextReviewDate());
+        assertEquals(1, session.reviewedCount());
+        assertTrue(session.isFinished());
     }
 }

@@ -1,6 +1,7 @@
 package pl.pcz.io2.fishquizfrontend.service;
 
 import pl.pcz.io2.fishquizfrontend.dao.FlashcardDAO;
+import pl.pcz.io2.fishquizfrontend.dao.QuizDAO;
 import pl.pcz.io2.fishquizfrontend.model.AnswerQuality;
 import pl.pcz.io2.fishquizfrontend.model.Flashcard;
 
@@ -13,9 +14,11 @@ import java.util.Map;
 import java.util.Optional;
 
 // Stan jednej sesji powtórki: kolejka fiszek do powtórki, bieżąca pozycja i oceny.
+// Kolejka to wszystkie fiszki do powtórki albo fiszki jednego zestawu (Quiz).
 // Bez JavaFX; QuizController woła start() i grade() przez FxTasks (baza).
 public class QuizSession {
     private final FlashcardDAO flashcardDAO;
+    private final QuizDAO quizDAO;
     private final SpacedRepetitionService spacedRepetitionService;
     private final ActionLogger actionLogger;
     private final Clock clock;
@@ -24,15 +27,16 @@ public class QuizSession {
     private final Map<AnswerQuality, Integer> counts = new EnumMap<>(AnswerQuality.class);
     private int index;
 
-    public QuizSession(FlashcardDAO flashcardDAO, SpacedRepetitionService spacedRepetitionService,
+    public QuizSession(FlashcardDAO flashcardDAO, QuizDAO quizDAO, SpacedRepetitionService spacedRepetitionService,
                        ActionLogger actionLogger) {
-        this(flashcardDAO, spacedRepetitionService, actionLogger, Clock.systemDefaultZone());
+        this(flashcardDAO, quizDAO, spacedRepetitionService, actionLogger, Clock.systemDefaultZone());
     }
 
     // Zegar do wstrzyknięcia w testach (ten sam powinien dostać SpacedRepetitionService)
-    public QuizSession(FlashcardDAO flashcardDAO, SpacedRepetitionService spacedRepetitionService,
+    public QuizSession(FlashcardDAO flashcardDAO, QuizDAO quizDAO, SpacedRepetitionService spacedRepetitionService,
                        ActionLogger actionLogger, Clock clock) {
         this.flashcardDAO = flashcardDAO;
+        this.quizDAO = quizDAO;
         this.spacedRepetitionService = spacedRepetitionService;
         this.actionLogger = actionLogger;
         this.clock = clock;
@@ -40,8 +44,25 @@ public class QuizSession {
 
     // Nowa sesja z fiszkami do powtórki na dziś; zwraca ich liczbę
     public int start() {
+        return begin(flashcardDAO.getDueFlashcards(LocalDate.now(clock)));
+    }
+
+    // Nowa sesja z fiszkami zestawu w jego kolejności. dueOnly: tylko te do powtórki na dziś,
+    // inaczej wszystkie (ocena i tak przesuwa ich termin wg SM-2). Zwraca liczbę fiszek.
+    public int start(int quizId, boolean dueOnly) {
+        LocalDate today = LocalDate.now(clock);
+        List<Flashcard> cards = quizDAO.getFlashcardsForQuiz(quizId);
+        if (dueOnly) {
+            cards = cards.stream()
+                    .filter(card -> card.getNextReviewDate() != null && !card.getNextReviewDate().isAfter(today))
+                    .toList();
+        }
+        return begin(cards);
+    }
+
+    private int begin(List<Flashcard> cards) {
         queue.clear();
-        queue.addAll(flashcardDAO.getDueFlashcards(LocalDate.now(clock)));
+        queue.addAll(cards);
         counts.clear();
         index = 0;
         return queue.size();
