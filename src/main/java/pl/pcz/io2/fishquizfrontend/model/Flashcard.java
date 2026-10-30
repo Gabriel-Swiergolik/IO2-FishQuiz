@@ -1,15 +1,39 @@
 package pl.pcz.io2.fishquizfrontend.model;
 
+import com.j256.ormlite.field.DatabaseField;
+import com.j256.ormlite.table.DatabaseTable;
+import pl.pcz.io2.fishquizdb.LocalDatePersister;
+
 import java.time.LocalDate;
 
+@DatabaseTable(tableName = "flashcards")
 public class Flashcard {
+    // Nazwy kolumn używane w zapytaniach DAO
+    public static final String ID_FIELD = "id";
+    public static final String NEXT_REVIEW_DATE_FIELD = "nextReviewDate";
+
+    @DatabaseField(generatedId = true)
     private int id;
+
+    @DatabaseField(canBeNull = false)
     private String frontText;
+
+    @DatabaseField(canBeNull = false)
     private String backText;
+
+    @DatabaseField
     private String imagePath;
+
+    @DatabaseField(persisterClass = LocalDatePersister.class)
     private LocalDate nextReviewDate;
+
+    @DatabaseField
     private int interval;
+
+    @DatabaseField
     private int repetitions;
+
+    @DatabaseField
     private double easinessFactor;
 
     public Flashcard() {

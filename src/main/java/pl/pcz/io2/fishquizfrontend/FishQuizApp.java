@@ -1,17 +1,33 @@
 package pl.pcz.io2.fishquizfrontend;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import pl.pcz.io2.fishquizdb.DatabaseManager;
+import pl.pcz.io2.fishquizfrontend.dao.DataAccessException;
 
 public class FishQuizApp extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        // Baza w start(), a nie w init(): Alert musi być pokazany w wątku JavaFX
+        try {
+            DatabaseManager.init();
+        } catch (DataAccessException e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Błąd bazy danych");
+            alert.setHeaderText("Nie udało się otworzyć lokalnej bazy danych.");
+            alert.setContentText("Aplikacja zostanie zamknięta.\n\n" + e.getMessage());
+            alert.showAndWait();
+            Platform.exit();
+            return;
+        }
+
         TabPane tabPane = new TabPane();
 
         Tab addTab = new Tab("Dodawanie fiszek");
@@ -51,6 +67,11 @@ public class FishQuizApp extends Application {
         primaryStage.setTitle("System Fiszek - Zespół IO_2");
         primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+    @Override
+    public void stop() {
+        DatabaseManager.close();
     }
 
     public static void main(String[] args) {
