@@ -128,6 +128,29 @@ class FlashcardDAOImplTest extends DbTestSupport {
     }
 
     @Test
+    void createAllSavesEveryCardWithIds() {
+        List<Flashcard> cards = List.of(
+                new Flashcard(0, "kot", "cat", null),
+                new Flashcard(0, "pies", "dog", "pies.png"));
+
+        dao.createAll(cards);
+
+        assertEquals(2, dao.findAll().size());
+        assertTrue(cards.stream().allMatch(c -> c.getId() > 0));
+    }
+
+    @Test
+    void createAllIsAllOrNothing() {
+        // Druga fiszka łamie NOT NULL, więc pierwsza też nie może zostać zapisana
+        List<Flashcard> cards = List.of(
+                new Flashcard(0, "kot", "cat", null),
+                new Flashcard(0, null, "dog", null));
+
+        assertThrows(DataAccessException.class, () -> dao.createAll(cards));
+        assertTrue(dao.findAll().isEmpty());
+    }
+
+    @Test
     void sqlErrorIsWrappedInDataAccessException() {
         // frontText ma NOT NULL, więc baza odrzuca zapis
         Flashcard invalid = new Flashcard(0, null, "tył", null);

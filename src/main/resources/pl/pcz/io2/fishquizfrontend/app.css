@@ -1,0 +1,30 @@
+/* Wspólne style aplikacji (podpięte w main-view.fxml) */
+
+/* Pole formularza z błędem walidacji */
+.text-input.invalid {
+    -fx-border-color: #d32f2f;
+    -fx-border-width: 1.5;
+}
+
+.status-error {
+    -fx-text-fill: #d32f2f;
+}
+
+.status-ok {
+    -fx-text-fill: #2e7d32;
+}
+
+.view-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+/* Quiz: awers i rewers większą czcionką */
+.quiz-front {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}
+
+.quiz-back {
+    -fx-font-size: 16px;
+}

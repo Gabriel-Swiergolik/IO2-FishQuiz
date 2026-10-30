@@ -29,6 +29,8 @@ class FlashcardMapperTest {
         assertEquals("kot", dto.getFrontText());
         assertEquals("cat", dto.getBackText());
         assertEquals("abc.png", dto.getImagePath());
+        // Data powtórki tylko do wyświetlenia na liście
+        assertEquals(REVIEW, dto.getNextReviewDate());
         // Obraz wczytuje widok, nie mapper
         assertNull(dto.getImage());
     }
@@ -77,6 +79,8 @@ class FlashcardMapperTest {
         dto.setImagePath("def.jpg");
         // Nawet zmienione id w DTO nie nadpisuje id edytowanej fiszki
         dto.setId(99);
+        // Data z DTO też nie wraca do modelu: zmienia ją tylko SM-2
+        dto.setNextReviewDate(REVIEW.plusDays(30));
 
         FlashcardMapper.updateModel(dto, card);
 

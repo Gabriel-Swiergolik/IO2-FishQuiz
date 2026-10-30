@@ -2,22 +2,28 @@ package pl.pcz.io2.fishquizfrontend;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.VBox;
+import javafx.scene.control.Alert;
 import javafx.stage.Stage;
 import pl.pcz.io2.fishquizdb.DatabaseManager;
 import pl.pcz.io2.fishquizfrontend.dao.DataAccessException;
+import pl.pcz.io2.fishquizfrontend.util.ErrorDialogs;
+
+import java.io.IOException;
 
 public class FishQuizApp extends Application {
+    private AppContext context;
 
     @Override
-    public void start(Stage primaryStage) {
+    public void start(Stage primaryStage) throws IOException {
+        ErrorDialogs.installUncaughtExceptionHandler();
+
         // Baza w start(), a nie w init(): Alert musi być pokazany w wątku JavaFX
         try {
             DatabaseManager.init();
+            context = new AppContext();
         } catch (DataAccessException e) {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Błąd bazy danych");
@@ -28,42 +34,12 @@ public class FishQuizApp extends Application {
             return;
         }
 
-        TabPane tabPane = new TabPane();
+        // Fabryka przechodzi też na pliki z fx:include, więc wszystkie kontrolery dostają zależności z AppContext
+        FXMLLoader loader = new FXMLLoader(FishQuizApp.class.getResource("main-view.fxml"));
+        loader.setControllerFactory(context.controllerFactory());
+        Parent root = loader.load();
 
-        Tab addTab = new Tab("Dodawanie fiszek");
-        addTab.setClosable(false); // Blokada zamykania zakładki
-        VBox addLayout = new VBox(15);
-        addLayout.setPadding(new Insets(20));
-        addLayout.getChildren().addAll(
-                new Label("Wprowadź dane nowej fiszki:"),
-                new TextField("Awers (np. słówko)"),
-                new TextArea("Rewers (np. tłumaczenie i opis)"),
-                new Button("Zapisz w lokalnej bazie")
-        );
-        addTab.setContent(addLayout);
-
-        Tab viewTab = new Tab("Przeglądanie");
-        viewTab.setClosable(false);
-        VBox viewLayout = new VBox(15);
-        viewLayout.setAlignment(Pos.CENTER);
-        viewLayout.getChildren().addAll(
-                new Label("Tutaj pojawi się tabela lub siatka z Twoimi fiszkami."),
-                new Button("Wczytaj fiszki")
-        );
-        viewTab.setContent(viewLayout);
-
-        Tab quizTab = new Tab("Quiz");
-        quizTab.setClosable(false);
-        VBox quizLayout = new VBox(15);
-        quizLayout.setAlignment(Pos.CENTER);
-        quizLayout.getChildren().addAll(
-                new Label("Gotowy na powtórkę interwałową?"),
-                new Button("Rozpocznij test")
-        );
-        quizTab.setContent(quizLayout);
-
-        tabPane.getTabs().addAll(addTab, viewTab, quizTab);
-        Scene scene = new Scene(tabPane, 600, 400);
+        Scene scene = new Scene(root, 800, 600);
         primaryStage.setTitle("System Fiszek - Zespół IO_2");
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -71,6 +47,10 @@ public class FishQuizApp extends Application {
 
     @Override
     public void stop() {
+        // Najpierw dokończ zapisy w tle, potem zamknij bazę
+        if (context != null) {
+            context.shutdown();
+        }
         DatabaseManager.close();
     }
 

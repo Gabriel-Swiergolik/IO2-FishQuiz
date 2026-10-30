@@ -42,6 +42,21 @@ public class FlashcardDAOImpl implements FlashcardDAO {
     }
 
     @Override
+    public void createAll(List<Flashcard> flashcards) {
+        try {
+            // Jedna transakcja zamiast osobnego zatwierdzenia dla każdej fiszki
+            TransactionManager.callInTransaction(connectionSource, () -> {
+                for (Flashcard flashcard : flashcards) {
+                    flashcardDao.create(flashcard);
+                }
+                return null;
+            });
+        } catch (SQLException e) {
+            throw new DataAccessException("Nie udało się zapisać " + flashcards.size() + " fiszek", e);
+        }
+    }
+
+    @Override
     public Optional<Flashcard> read(Integer id) {
         try {
             return Optional.ofNullable(flashcardDao.queryForId(id));

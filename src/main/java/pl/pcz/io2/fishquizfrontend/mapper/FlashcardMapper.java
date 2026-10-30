@@ -14,6 +14,7 @@ public final class FlashcardMapper {
         dto.setFrontText(flashcard.getFrontText());
         dto.setBackText(flashcard.getBackText());
         dto.setImagePath(flashcard.getImagePath());
+        dto.setNextReviewDate(flashcard.getNextReviewDate());
         return dto;
     }
 

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+
+<!-- Główne okno: jedna zakładka = jeden plik FXML z własnym kontrolerem -->
+<TabPane fx:id="tabPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+         fx:controller="pl.pcz.io2.fishquizfrontend.controller.HomeController"
+         tabClosingPolicy="UNAVAILABLE" stylesheets="@app.css">
+    <tabs>
+        <Tab fx:id="formTab" text="Dodawanie fiszek">
+            <content>
+                <fx:include fx:id="form" source="flashcard-form.fxml"/>
+            </content>
+        </Tab>
+        <Tab fx:id="listTab" text="Przeglądanie">
+            <content>
+                <fx:include fx:id="list" source="flashcard-list.fxml"/>
+            </content>
+        </Tab>
+        <Tab fx:id="quizTab" text="Quiz">
+            <content>
+                <fx:include fx:id="quiz" source="quiz-view.fxml"/>
+            </content>
+        </Tab>
+    </tabs>
+</TabPane>

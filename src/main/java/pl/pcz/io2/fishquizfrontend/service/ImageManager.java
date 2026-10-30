@@ -51,12 +51,14 @@ public class ImageManager {
         return p.isAbsolute() ? p : imagesDir.resolve(p);
     }
 
-    // null, jeśli fiszka nie ma obrazu albo pliku już nie ma
+    // null, jeśli fiszka nie ma obrazu, pliku już nie ma albo nie da się go odczytać jako obrazu
     public Image loadImage(String path) {
         if (path == null || path.isBlank()) return null;
         Path file = resolvePath(path);
         if (!Files.isRegularFile(file)) return null;
-        return new Image(file.toUri().toString());
+        // Wczytanie synchroniczne, więc błąd (np. uszkodzony plik) jest znany od razu
+        Image image = new Image(file.toUri().toString());
+        return image.isError() ? null : image;
     }
 
     // Brak pliku nie jest błędem
