@@ -12,10 +12,13 @@ import pl.pcz.io2.fishquizfrontend.model.QuizFlashcard;
 
 import java.sql.SQLException;
 
-public class DatabaseManager {
+public final class DatabaseManager {
     private static final Logger log = LoggerFactory.getLogger(DatabaseManager.class);
     private static final String DEFAULT_DATABASE_URL = "jdbc:sqlite:database.db";
     private static ConnectionSource connectionSource;
+
+    private DatabaseManager(){
+    }
 
     public static void init(){
         init(DEFAULT_DATABASE_URL);
@@ -32,13 +35,17 @@ public class DatabaseManager {
             createTables(connectionSource);
             log.info("Połączono z bazą danych: {}", new java.io.File(databaseUrl.replace("jdbc:sqlite:", "")).getAbsolutePath());
         }catch (SQLException e){
-            log.error("Błąd połączenia z bazą danych {}", databaseUrl, e);
+            log.error("Błąd połączenia z bazSą danych {}", databaseUrl, e);
             if (connectionSource != null){
                 connectionSource.closeQuietly();
                 connectionSource = null;
             }
             throw new DataAccessException("Nie udało się otworzyć bazy danych: " + databaseUrl, e);
         }
+    }
+
+    private static void enableForeignKeys(ConnectionSource source) throws SQLException{
+        source.getReadWriteConnection(null).executeStatement("PRAGMA foreign_keys = ON;", -1);
     }
 
     // Tworzy brakujące tabele; istniejące (i ich dane) zostają bez zmian
