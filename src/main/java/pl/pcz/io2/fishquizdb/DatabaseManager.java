@@ -35,7 +35,7 @@ public final class DatabaseManager {
             createTables(connectionSource);
             log.info("Połączono z bazą danych: {}", new java.io.File(databaseUrl.replace("jdbc:sqlite:", "")).getAbsolutePath());
         }catch (SQLException e){
-            log.error("Błąd połączenia z bazSą danych {}", databaseUrl, e);
+            log.error("Błąd połączenia z bazą danych {}", databaseUrl, e);
             if (connectionSource != null){
                 connectionSource.closeQuietly();
                 connectionSource = null;
